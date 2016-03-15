@@ -69,7 +69,7 @@ uint32_t maxNodes = 50; //maximum number of nodes, excluding AP
 int main (int argc, char *argv[])
 {
   uint32_t packetSize = 1024; // bytes
-  uint32_t numPackets = 1;
+  uint32_t numPackets = 320;
   double interval = 1.0; // seconds
 
 
@@ -123,14 +123,14 @@ int main (int argc, char *argv[])
   //Step 2: Create Topology 
   cout<<"Creating Topology and creating network devices in nodes  ..."<<endl;
   YansWifiChannelHelper wifiChannel = YansWifiChannelHelper::Default ();
-  wifiChannel.SetPropagationDelay ("ns3::ConstantSpeedPropagationDelayModel");
+  //wifiChannel.SetPropagationDelay ("ns3::ConstantSpeedPropagationDelayModel");
   //wifiChannel.AddPropagationLoss ("ns3::FixedRssLossModel","Rss",DoubleValue (rss));
-  wifiChannel.AddPropagationLoss ("ns3::LogDistancePropagationLossModel",
-                                  "Exponent", DoubleValue (3.0));
+  //wifiChannel.AddPropagationLoss ("ns3::LogDistancePropagationLossModel",
+  //                                "Exponent", DoubleValue (3.0));
 
 
   YansWifiPhyHelper wifiPhy = YansWifiPhyHelper::Default ();
-  wifiPhy.SetPcapDataLinkType (YansWifiPhyHelper::DLT_IEEE802_11_RADIO); // ns-3 supports RadioTap and Prism tracing extensions for 802.11b
+  //wifiPhy.SetPcapDataLinkType (YansWifiPhyHelper::DLT_IEEE802_11_RADIO); // ns-3 supports RadioTap and Prism tracing extensions for 802.11b
 
 
   wifiPhy.SetChannel (wifiChannel.Create ());
@@ -142,10 +142,10 @@ int main (int argc, char *argv[])
   string phyMode ("DsssRate11Mbps");
   WifiHelper wifi = WifiHelper::Default ();
   wifi.SetStandard (WIFI_PHY_STANDARD_80211b);
-  //wifi.SetRemoteStationManager ("ns3::AarfWifiManager");  //set rate control algorithm
-  wifi.SetRemoteStationManager ("ns3::ConstantRateWifiManager",
-                                "DataMode",StringValue (phyMode),
-                                "ControlMode",StringValue (phyMode));
+  wifi.SetRemoteStationManager ("ns3::AarfWifiManager");  //set rate control algorithm
+  //wifi.SetRemoteStationManager ("ns3::ConstantRateWifiManager",
+  //                              "DataMode",StringValue (phyMode),
+  //                              "ControlMode",StringValue (phyMode));
 
 
   if (verbose)
@@ -212,23 +212,23 @@ int main (int argc, char *argv[])
 
   mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
   mobility.Install (wifiApNode); //set constant position mobility model on AP 
-  mobility.Install (wifiStaNodes); //set mobility  constant position  model on subwoofer and satellites
+//  mobility.Install (wifiStaNodes); //set mobility  constant position  model on subwoofer and satellites
 
   mobility.SetMobilityModel ("ns3::RandomWalk2dMobilityModel",
                              "Bounds", RectangleValue (Rectangle (-1500, 1500, -1500, 1500)));
-  mobility.Install (wifiStaNodes.Get(0)); //set mobility model on mobile phone
-
-
-
+  //mobility.Install (wifiStaNodes.Get(0)); //set mobility model on mobile phone
+  mobility.Install (wifiStaNodes); //set mobility  constant position  model on subwoofer and satellites
 
 
   /*Phase B: Execute and simulate */
   UdpEchoServerHelper echoServer (9);
   ApplicationContainer serverApps = echoServer.Install (wifiStaNodes.Get (nWifi-1)); //set server on sat
+  //ApplicationContainer serverApps = echoServer.Install (wifiStaNodes.Get (1)); //set server on sat
   serverApps.Start (Seconds (1.0));
   serverApps.Stop (Seconds (10.0));
 
   UdpEchoClientHelper echoClient (sta_interface.GetAddress (nWifi-1), 9); 
+  //UdpEchoClientHelper echoClient (sta_interface.GetAddress (1), 9); 
   echoClient.SetAttribute ("MaxPackets", UintegerValue(numPackets));
   echoClient.SetAttribute ("Interval", TimeValue (Seconds(interval)));
   echoClient.SetAttribute ("PacketSize", UintegerValue(packetSize));
@@ -237,12 +237,12 @@ int main (int argc, char *argv[])
   clientApps.Start (Seconds (2.0));
   clientApps.Stop (Seconds (10.0));
 
- // Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
+  Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
 
   
   //Throughput calculated using Flowmon
-  //FlowMonitorHelper flowmon; 
-  //Ptr<FlowMonitor>monitor=flowmon.InstallAll();
+  FlowMonitorHelper flowmon; 
+  Ptr<FlowMonitor>monitor=flowmon.InstallAll();
    
 
  
@@ -257,8 +257,24 @@ int main (int argc, char *argv[])
   NS_LOG_INFO ("Run Simulation.");
   Simulator::Run ();
 
-  // monitor->CheckForLostPackets ();
+   monitor->CheckForLostPackets ();
 
+  Ptr<Ipv4FlowClassifier> classifier = DynamicCast<Ipv4FlowClassifier> (flowmon.GetClassifier ());
+  std::map<FlowId, FlowMonitor::FlowStats> stats = monitor->GetFlowStats ();
+  for (std::map<FlowId, FlowMonitor::FlowStats>::const_iterator i = stats.begin (); i != stats.end (); ++i)
+    {
+	  Ipv4FlowClassifier::FiveTuple t = classifier->FindFlow (i->first);
+      //if ((t.sourceAddress=="10.1.1.1" && t.destinationAddress == "10.1.1.7"))
+      if ((t.sourceAddress=="10.1.1.1") )
+      {
+          std::cout << "Flow " << i->first  << " (" << t.sourceAddress << " -> " << t.destinationAddress << ")\n";
+          std::cout << "  Tx Bytes:   " << i->second.txBytes << "\n";
+          std::cout << "  Rx Bytes:   " << i->second.rxBytes << "\n";
+      	  std::cout << "  Throughput: " << i->second.rxBytes * 8.0 / (i->second.timeLastRxPacket.GetSeconds() - i->second.timeFirstTxPacket.GetSeconds())/1024/1024  << " Mbps\n";
+      }
+     }
+
+  monitor->SerializeToXmlFile("luna.flowmon", true, true);
 
   Simulator::Destroy ();
   
