@@ -15,13 +15,20 @@
  */
 
 #include "ns3/core-module.h"
-#include "ns3/point-to-point-module.h"
+//#include "ns3/point-to-point-module.h"
 #include "ns3/network-module.h"
 #include "ns3/applications-module.h"
 #include "ns3/wifi-module.h"
 #include "ns3/mobility-module.h"
-#include "ns3/csma-module.h"
+//#include "ns3/csma-module.h"
 #include "ns3/internet-module.h"
+#include "ns3/flow-monitor-module.h"
+
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <string>
+
 
 // Default Network Topology
 //
@@ -53,42 +60,42 @@ Phase B: Execute and Simulate
 using namespace ns3;
 using namespace std;
 
-NS_LOG_COMPONENT_DEFINE ("Luna NS-3 Project");
+NS_LOG_COMPONENT_DEFINE ("Luna NS-3 Project: Wifi Infrastructur (AP + Nodes)");
 
 
-int
-main (int argc, char *argv[])
+uint32_t maxNodes = 50; //maximum number of nodes, excluding AP
+
+
+int main (int argc, char *argv[])
 {
+  uint32_t packetSize = 1024; // bytes
+  uint32_t numPackets = 1;
+  double interval = 1.0; // seconds
+
 
   bool verbose = true;
-  uint32_t nCsma = 0;
+  bool tracing = true;
 
-  uint32_t nSub = 1;  	// number of subwoofers 
+  uint32_t nSub = 1;  	//number of subwoofers 
   uint32_t nSat = 5;  	//number of satellites   
   uint32_t nMobile = 1; //number of mobile phones  
   uint32_t nAP = 1; 	//number of AP
-  uint32_t nWifi = 0;  
+  uint32_t nWifi = 0;   //total number of wireless nodes, excluding AP 
 
-  bool tracing = false;
 
- 
 
   Time::SetResolution (Time::NS);
 
   CommandLine cmd;
-  cmd.AddValue ("nCsma", "Number of \"extra\" CSMA nodes/devices", nCsma);
   cmd.AddValue ("nWifi", "Number of wifi STA devices", nWifi);
   cmd.AddValue ("verbose", "Tell echo applications to log if true", verbose);
   cmd.AddValue ("tracing", "Enable pcap tracing", tracing);
   cmd.Parse (argc,argv);
 
-  // Check for valid number of csma or wifi nodes
-  // 250 should be enough, otherwise IP addresses 
-  // soon become an issue
-//  cout<<"Program start \n nWifi"<<nWifi<<endl;
-  if (nWifi > 50 )
+  // Check for valid number of wifi nodes
+  if (nWifi > maxNodes )
     {
-      std::cout << "Too many wifi, no more than 50 each." << std::endl;
+      cout << "Too many wifi, no more than 50 each." << endl;
       return 1;
     }
 
@@ -98,9 +105,9 @@ main (int argc, char *argv[])
       LogComponentEnable ("UdpEchoServerApplication", LOG_LEVEL_INFO);
     }
 
+
   /*Phase A: Setup environment*/
  
-
   //Step 1: create Nodes + AP
   cout<<"Creating Nodes and AP ..."<<endl;
   nWifi = nSub + nSat + nMobile;   
@@ -112,34 +119,85 @@ main (int argc, char *argv[])
   wifiApNode.Create (nAP);
   cout<<"Nodes and AP created \n"<<endl;
 
+
   //Step 2: Create Topology 
   cout<<"Creating Topology and creating network devices in nodes  ..."<<endl;
-  YansWifiChannelHelper channel = YansWifiChannelHelper::Default ();
-  YansWifiPhyHelper phy = YansWifiPhyHelper::Default ();
-  phy.SetChannel (channel.Create ());
+  YansWifiChannelHelper wifiChannel = YansWifiChannelHelper::Default ();
+  wifiChannel.SetPropagationDelay ("ns3::ConstantSpeedPropagationDelayModel");
+  //wifiChannel.AddPropagationLoss ("ns3::FixedRssLossModel","Rss",DoubleValue (rss));
+  wifiChannel.AddPropagationLoss ("ns3::LogDistancePropagationLossModel",
+                                  "Exponent", DoubleValue (3.0));
+
+
+  YansWifiPhyHelper wifiPhy = YansWifiPhyHelper::Default ();
+  wifiPhy.SetPcapDataLinkType (YansWifiPhyHelper::DLT_IEEE802_11_RADIO); // ns-3 supports RadioTap and Prism tracing extensions for 802.11b
+
+
+  wifiPhy.SetChannel (wifiChannel.Create ());
   cout<<"Topology and network devices installation completed \n"<<endl;
 
-  //Configure MAC layer
+
+  //Configure Nodes MAC layer
   cout<<"Configuring MAC layer ..."<<endl;
+  string phyMode ("DsssRate11Mbps");
   WifiHelper wifi = WifiHelper::Default ();
-  wifi.SetRemoteStationManager ("ns3::AarfWifiManager");  //set rate control algorithm
+  wifi.SetStandard (WIFI_PHY_STANDARD_80211b);
+  //wifi.SetRemoteStationManager ("ns3::AarfWifiManager");  //set rate control algorithm
+  wifi.SetRemoteStationManager ("ns3::ConstantRateWifiManager",
+                                "DataMode",StringValue (phyMode),
+                                "ControlMode",StringValue (phyMode));
 
-  NqosWifiMacHelper mac = NqosWifiMacHelper::Default ();
 
+  if (verbose)
+    {
+     // wifi.EnableLogComponents ();  // Turn on all Wifi logging
+    }
+
+
+
+  NqosWifiMacHelper wifiMac = NqosWifiMacHelper::Default ();
   Ssid ssid = Ssid ("luna-airplay");
-  mac.SetType ("ns3::StaWifiMac",
+
+  //configure STA upper mac
+  wifiMac.SetType ("ns3::StaWifiMac",
                "Ssid", SsidValue (ssid),
                "ActiveProbing", BooleanValue (false));
 
   NetDeviceContainer staDevices;
-  staDevices = wifi.Install (phy, mac, wifiStaNodes);
+  staDevices = wifi.Install (wifiPhy, wifiMac, wifiStaNodes);
 
-  mac.SetType ("ns3::ApWifiMac",
+
+  //Configure AP upper mac
+  wifiMac.SetType ("ns3::ApWifiMac",
                "Ssid", SsidValue (ssid));
 
   NetDeviceContainer apDevices;
-  apDevices = wifi.Install (phy, mac, wifiApNode);
+  apDevices = wifi.Install (wifiPhy, wifiMac, wifiApNode);
 
+
+
+  //Set up protocol stack
+  cout<<"Setting up protocol stack ..."<<endl;
+  InternetStackHelper stack;
+  stack.Install (wifiStaNodes);
+  stack.Install (wifiApNode);
+  cout<<"Protocl stack setup completed \n"<<endl;
+
+  //Configure IPv4 
+  cout<<"Configuring IPv4 address for nodes ..."<<endl;
+  Ipv4AddressHelper ipv4;
+
+  ipv4.SetBase ("10.1.1.0", "255.255.255.0");
+  Ipv4InterfaceContainer sta_interface; 
+  Ipv4InterfaceContainer ap_interface;
+  sta_interface = ipv4.Assign (staDevices);
+  ap_interface = ipv4.Assign (apDevices);
+
+
+  Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
+
+  cout<<"IPv4 address setup completed \n"<<endl;
+  
 
   /*Setting up mobility*/
   MobilityHelper mobility;
@@ -152,50 +210,39 @@ main (int argc, char *argv[])
                                  "GridWidth", UintegerValue (3),
                                  "LayoutType", StringValue ("RowFirst"));
 
+  mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
+  mobility.Install (wifiApNode); //set constant position mobility model on AP 
+  mobility.Install (wifiStaNodes); //set mobility  constant position  model on subwoofer and satellites
+
   mobility.SetMobilityModel ("ns3::RandomWalk2dMobilityModel",
                              "Bounds", RectangleValue (Rectangle (-1500, 1500, -1500, 1500)));
-  mobility.Install (wifiStaNodes);
+  mobility.Install (wifiStaNodes.Get(0)); //set mobility model on mobile phone
 
-  mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
-  mobility.Install (wifiApNode);
 
-  //Set up protocol stack
-  cout<<"Setting up protocol stack ..."<<endl;
-  InternetStackHelper stack;
-  stack.Install (wifiStaNodes);
-  stack.Install (wifiApNode);
-  cout<<"Protocl stack setup completed \n"<<endl;
 
-  //Configure IPv4 
-  cout<<"Configuring IPv4 address for nodes ..."<<endl;
-  Ipv4AddressHelper address;
 
-  address.SetBase ("10.1.1.0", "255.255.255.0");
-  Ipv4InterfaceContainer sta_interface; 
-  Ipv4InterfaceContainer ap_interface;
-  sta_interface = address.Assign (staDevices);
-  ap_interface = address.Assign (apDevices);
-  cout<<"IPv4 address setup completed \n"<<endl;
-  
+
   /*Phase B: Execute and simulate */
   UdpEchoServerHelper echoServer (9);
-  ApplicationContainer serverApps = echoServer.Install (wifiStaNodes.Get (nWifi-1)); //set server on mobile phone 
+  ApplicationContainer serverApps = echoServer.Install (wifiStaNodes.Get (nWifi-1)); //set server on sat
   serverApps.Start (Seconds (1.0));
   serverApps.Stop (Seconds (10.0));
 
-  UdpEchoClientHelper echoClient (sta_interface.GetAddress (nWifi-1), 9);
-  echoClient.SetAttribute ("MaxPackets", UintegerValue (1));
-  echoClient.SetAttribute ("Interval", TimeValue (Seconds (1.0)));
-  echoClient.SetAttribute ("PacketSize", UintegerValue (1024));
+  UdpEchoClientHelper echoClient (sta_interface.GetAddress (nWifi-1), 9); 
+  echoClient.SetAttribute ("MaxPackets", UintegerValue(numPackets));
+  echoClient.SetAttribute ("Interval", TimeValue (Seconds(interval)));
+  echoClient.SetAttribute ("PacketSize", UintegerValue(packetSize));
 
-  ApplicationContainer clientApps =  echoClient.Install (wifiStaNodes.Get (0));
+  ApplicationContainer clientApps =  echoClient.Install (wifiStaNodes.Get (0)); //set client on mobile phone 
   clientApps.Start (Seconds (2.0));
   clientApps.Stop (Seconds (10.0));
 
-  Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
+ // Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
 
+  
+  //Throughput calculated using Flowmon
   //FlowMonitorHelper flowmon; 
-  //Ptr<FLowMonitor>monitor=flowmon.InstallAll();
+  //Ptr<FlowMonitor>monitor=flowmon.InstallAll();
    
 
  
@@ -203,12 +250,16 @@ main (int argc, char *argv[])
 
   if (tracing == true)
     {
-      //pointToPoint.EnablePcapAll ("third");
-      phy.EnablePcap ("third", apDevices.Get (0));
-      //csma.EnablePcap ("third", csmaDevices.Get (0), true);
+      //wifiPhy.EnablePcap ("third", apDevices.Get (0));
+      wifiPhy.EnablePcapAll ("wifiPhyPcapAll");
     }
 
+  NS_LOG_INFO ("Run Simulation.");
   Simulator::Run ();
+
+  // monitor->CheckForLostPackets ();
+
+
   Simulator::Destroy ();
   
  cout<<"program done "<<endl;
