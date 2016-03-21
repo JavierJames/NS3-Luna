@@ -68,36 +68,30 @@ uint32_t maxNodes = 50; //maximum number of nodes, excluding AP
 
 int main (int argc, char *argv[])
 {
-  uint32_t packetSize = 1024; // bytes
-  uint32_t numPackets = 320;
-  double interval = 1.0; // seconds
 
+
+  uint32_t nMobile = 0; 			//number of mobile phones  
+  uint32_t nSub = 0;  				//number of subwoofers 
+  uint32_t nSat = 8 ;  				//number of satellites   
+  uint32_t nAP = 1; 				//number of AP
+  uint32_t nWifi = nSub + nSat + nMobile;   	//total number of wireless nodes, excluding AP
+  uint32_t packetSize = 2048; 			// bytes
+  uint32_t numPackets = 1; 			//320
+  double interval = 1.0; 			// seconds
 
   bool verbose = true;
   bool tracing = true;
 
-  uint32_t nSub = 1;  	//number of subwoofers 
-  uint32_t nSat = 5;  	//number of satellites   
-  uint32_t nMobile = 1; //number of mobile phones  
-  uint32_t nAP = 1; 	//number of AP
-  uint32_t nWifi = 0;   //total number of wireless nodes, excluding AP 
-
-
-
   Time::SetResolution (Time::NS);
 
   CommandLine cmd;
-  cmd.AddValue ("nWifi", "Number of wifi STA devices", nWifi);
+  cmd.AddValue ("nSat", "Number of wifi STA devices, Satellites", nSat);
+  cmd.AddValue ("packetSize", "Payload size", packetSize);
+  cmd.AddValue ("numPackets", "Number of packets", numPackets);
   cmd.AddValue ("verbose", "Tell echo applications to log if true", verbose);
   cmd.AddValue ("tracing", "Enable pcap tracing", tracing);
   cmd.Parse (argc,argv);
 
-  // Check for valid number of wifi nodes
-  if (nWifi > maxNodes )
-    {
-      cout << "Too many wifi, no more than 50 each." << endl;
-      return 1;
-    }
 
   if (verbose)
     {
@@ -110,7 +104,15 @@ int main (int argc, char *argv[])
  
   //Step 1: create Nodes + AP
   cout<<"Creating Nodes and AP ..."<<endl;
-  nWifi = nSub + nSat + nMobile;   
+
+  // Check for valid number of wifi nodes
+  if (nWifi > maxNodes )
+    {
+      cout << "Too many wifi, no more than 50 each." << endl;
+      return 1;
+    }
+  cout << "nWifi =   " << nWifi << endl;  
+  
 
   NodeContainer wifiStaNodes;
   wifiStaNodes.Create (nWifi);   
@@ -125,13 +127,13 @@ int main (int argc, char *argv[])
   YansWifiChannelHelper wifiChannel = YansWifiChannelHelper::Default ();
   //wifiChannel.SetPropagationDelay ("ns3::ConstantSpeedPropagationDelayModel");
   //wifiChannel.AddPropagationLoss ("ns3::FixedRssLossModel","Rss",DoubleValue (rss));
+ 
   //wifiChannel.AddPropagationLoss ("ns3::LogDistancePropagationLossModel",
   //                                "Exponent", DoubleValue (3.0));
 
 
   YansWifiPhyHelper wifiPhy = YansWifiPhyHelper::Default ();
-  //wifiPhy.SetPcapDataLinkType (YansWifiPhyHelper::DLT_IEEE802_11_RADIO); // ns-3 supports RadioTap and Prism tracing extensions for 802.11b
-
+  wifiPhy.SetPcapDataLinkType (YansWifiPhyHelper::DLT_IEEE802_11_RADIO); // ns-3 supports RadioTap and Prism tracing extensions for 802.11b
 
   wifiPhy.SetChannel (wifiChannel.Create ());
   cout<<"Topology and network devices installation completed \n"<<endl;
@@ -142,18 +144,17 @@ int main (int argc, char *argv[])
   string phyMode ("DsssRate11Mbps");
   WifiHelper wifi = WifiHelper::Default ();
   wifi.SetStandard (WIFI_PHY_STANDARD_80211b);
-  wifi.SetRemoteStationManager ("ns3::AarfWifiManager");  //set rate control algorithm
-  //wifi.SetRemoteStationManager ("ns3::ConstantRateWifiManager",
-  //                              "DataMode",StringValue (phyMode),
-  //                              "ControlMode",StringValue (phyMode));
+  //wifi.SetRemoteStationManager ("ns3::AarfWifiManager");  //set rate control algorithm
+  wifi.SetRemoteStationManager ("ns3::ConstantRateWifiManager",
+                                "DataMode",StringValue (phyMode),
+                                "ControlMode",StringValue (phyMode));
 
-
+/*
   if (verbose)
     {
-     // wifi.EnableLogComponents ();  // Turn on all Wifi logging
+      wifi.EnableLogComponents ();  // Turn on all Wifi logging
     }
-
-
+*/
 
   NqosWifiMacHelper wifiMac = NqosWifiMacHelper::Default ();
   Ssid ssid = Ssid ("luna-airplay");
@@ -177,31 +178,38 @@ int main (int argc, char *argv[])
 
 
   //Set up protocol stack
-  cout<<"Setting up protocol stack ..."<<endl;
+  cout<<"Setting up protocol stack and ipv4 address ..."<<endl;
   InternetStackHelper stack;
   stack.Install (wifiStaNodes);
   stack.Install (wifiApNode);
-  cout<<"Protocl stack setup completed \n"<<endl;
 
   //Configure IPv4 
   cout<<"Configuring IPv4 address for nodes ..."<<endl;
   Ipv4AddressHelper ipv4;
+  Ipv4Address addr;
 
   ipv4.SetBase ("10.1.1.0", "255.255.255.0");
   Ipv4InterfaceContainer sta_interface; 
   Ipv4InterfaceContainer ap_interface;
-  sta_interface = ipv4.Assign (staDevices);
   ap_interface = ipv4.Assign (apDevices);
+  sta_interface = ipv4.Assign (staDevices);
 
 
-  Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
+ //debug ip addresses 
+ for(uint32_t i = 0 ; i < nWifi; i++)
+ {
+	addr = sta_interface.GetAddress(i);
+	std::cout << " Node " << i+1 << "\t "<< "IP Address "<<addr << std::endl;
+ }
 
-  cout<<"IPv4 address setup completed \n"<<endl;
+ addr = ap_interface.GetAddress(0);
+ std::cout << " AP " << "\t "<< "IP Address "<<addr << std::endl;
+ std::cout << "Internet Stack & IPv4 address configured.." << '\n';
+ cout<<"IPv4 address setup completed \n"<<endl;
   
 
   /*Setting up mobility*/
   MobilityHelper mobility;
-
   mobility.SetPositionAllocator ("ns3::GridPositionAllocator",
                                  "MinX", DoubleValue (0.0),
                                  "MinY", DoubleValue (0.0),
@@ -212,52 +220,56 @@ int main (int argc, char *argv[])
 
   mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
   mobility.Install (wifiApNode); //set constant position mobility model on AP 
-//  mobility.Install (wifiStaNodes); //set mobility  constant position  model on subwoofer and satellites
+  //mobility.Install (wifiStaNodes); //set mobility  constant position  model on subwoofer and satellites
 
   mobility.SetMobilityModel ("ns3::RandomWalk2dMobilityModel",
-                             "Bounds", RectangleValue (Rectangle (-1500, 1500, -1500, 1500)));
+                             "Bounds", RectangleValue (Rectangle (-50, 50, -50, 50)));
   //mobility.Install (wifiStaNodes.Get(0)); //set mobility model on mobile phone
-  mobility.Install (wifiStaNodes); //set mobility  constant position  model on subwoofer and satellites
-
+   mobility.Install (wifiStaNodes); //set mobility  constant position  model on subwoofer and satellites
 
   /*Phase B: Execute and simulate */
   UdpEchoServerHelper echoServer (9);
-  ApplicationContainer serverApps = echoServer.Install (wifiStaNodes.Get (nWifi-1)); //set server on sat
+  //ApplicationContainer serverApps = echoServer.Install (wifiStaNodes.Get (nWifi-1)); //set server on sat
   //ApplicationContainer serverApps = echoServer.Install (wifiStaNodes.Get (1)); //set server on sat
+  ApplicationContainer serverApps = echoServer.Install (wifiStaNodes.Get (0)); //set server on sat
   serverApps.Start (Seconds (1.0));
   serverApps.Stop (Seconds (10.0));
 
-  UdpEchoClientHelper echoClient (sta_interface.GetAddress (nWifi-1), 9); 
+  //UdpEchoClientHelper echoClient (sta_interface.GetAddress (nWifi-1), 9); 
   //UdpEchoClientHelper echoClient (sta_interface.GetAddress (1), 9); 
+  UdpEchoClientHelper echoClient (sta_interface.GetAddress (0), 9); 
   echoClient.SetAttribute ("MaxPackets", UintegerValue(numPackets));
   echoClient.SetAttribute ("Interval", TimeValue (Seconds(interval)));
   echoClient.SetAttribute ("PacketSize", UintegerValue(packetSize));
+  //echoClient.SetAttribute ("Interval", TimeValue (Time("0.002")));
 
-  ApplicationContainer clientApps =  echoClient.Install (wifiStaNodes.Get (0)); //set client on mobile phone 
+  //ApplicationContainer clientApps =  echoClient.Install (wifiStaNodes.Get (0)); //set client on mobile phone 
+  ApplicationContainer clientApps =  echoClient.Install (wifiApNode.Get (0)); //set client on mobile phone 
   clientApps.Start (Seconds (2.0));
   clientApps.Stop (Seconds (10.0));
 
   Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
 
+  Simulator::Stop (Seconds (10.0));
   
   //Throughput calculated using Flowmon
   FlowMonitorHelper flowmon; 
   Ptr<FlowMonitor>monitor=flowmon.InstallAll();
    
 
- 
-  Simulator::Stop (Seconds (10.0));
-
   if (tracing == true)
     {
+      //wifiPhy.EnablePcap ("third", staDevices.Get (1));
       //wifiPhy.EnablePcap ("third", apDevices.Get (0));
       wifiPhy.EnablePcapAll ("wifiPhyPcapAll");
     }
 
+
   NS_LOG_INFO ("Run Simulation.");
   Simulator::Run ();
 
-   monitor->CheckForLostPackets ();
+
+  monitor->CheckForLostPackets ();
 
   Ptr<Ipv4FlowClassifier> classifier = DynamicCast<Ipv4FlowClassifier> (flowmon.GetClassifier ());
   std::map<FlowId, FlowMonitor::FlowStats> stats = monitor->GetFlowStats ();
@@ -265,22 +277,21 @@ int main (int argc, char *argv[])
     {
 	  Ipv4FlowClassifier::FiveTuple t = classifier->FindFlow (i->first);
       //if ((t.sourceAddress=="10.1.1.1" && t.destinationAddress == "10.1.1.7"))
-      if ((t.sourceAddress=="10.1.1.1") )
-      {
+      //if ((t.sourceAddress=="10.1.1.1") )
+     // {
           std::cout << "Flow " << i->first  << " (" << t.sourceAddress << " -> " << t.destinationAddress << ")\n";
           std::cout << "  Tx Bytes:   " << i->second.txBytes << "\n";
           std::cout << "  Rx Bytes:   " << i->second.rxBytes << "\n";
       	  std::cout << "  Throughput: " << i->second.rxBytes * 8.0 / (i->second.timeLastRxPacket.GetSeconds() - i->second.timeFirstTxPacket.GetSeconds())/1024/1024  << " Mbps\n";
-      }
+          //std::cout << " Delay : " << i->second.delaySum / i->second.rxPackets << "\n"; 
+         // }
      }
 
   monitor->SerializeToXmlFile("luna.flowmon", true, true);
 
   Simulator::Destroy ();
   
- cout<<"program done "<<endl;
-return 0;
-
-
+  cout<<"program done "<<endl;
+  return 0;
 
 }
