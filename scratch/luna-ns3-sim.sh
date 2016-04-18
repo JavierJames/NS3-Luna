@@ -55,7 +55,7 @@ do
   do
     echo Trial $trial, number of satellites $nsats
     #../../waf --run "wifi-luna --format=db --distance=$nsats --run=run-$distance-$trial"
-    ../waf --run "luna --nSat=$nsats"
+    ../waf --run "luna --nSat=$nsats --format=db --run=run-$nsats-$trial"
   done
 done
 

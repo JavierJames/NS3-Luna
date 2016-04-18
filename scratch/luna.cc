@@ -24,11 +24,25 @@
 #include "ns3/internet-module.h"
 #include "ns3/flow-monitor-module.h"
 
+#include <sqlite3.h> 
+
+#include "ns3/internet-module.h"
+#include "ns3/stats-module.h"
+//#include "wifi-example-apps.h"
+
+
+
 #include <iostream>
 #include <fstream>
 #include <vector>
 #include <string>
+#include <ctime>
+#include <sstream>
 
+//#include <stream> 
+#include <string>
+#include <stdio.h>
+#include <iomanip>
 
 // Default Network Topology
 //
@@ -66,13 +80,25 @@ NS_LOG_COMPONENT_DEFINE ("Luna NS-3 Project: Wifi Infrastructur (AP + Nodes)");
 uint32_t maxNodes = 50; //maximum number of nodes, excluding AP
 
 
+void TxCallback (Ptr<CounterCalculator<uint32_t> > datac,
+                 std::string path, Ptr<const Packet> packet) {
+  NS_LOG_INFO ("Sent frame counted in " <<
+               datac->GetKey ());
+  datac->Update ();
+  // end TxCallback
+}
+
+
+
+/******************************************************
+* main
+*******************************************************/
 int main (int argc, char *argv[])
 {
 
-
   uint32_t nMobile = 0; 			//number of mobile phones  
   uint32_t nSub = 0;  				//number of subwoofers 
-  uint32_t nSat = 8 ;  				//number of satellites   
+  uint32_t nSat = 2 ;  				//number of satellites   
   uint32_t nAP = 1; 				//number of AP
   uint32_t nWifi = nSub + nSat + nMobile;   	//total number of wireless nodes, excluding AP
   uint32_t packetSize = 2048; 			// bytes
@@ -82,15 +108,105 @@ int main (int argc, char *argv[])
   bool verbose = true;
   bool tracing = true;
 
+
+  string experiment ("luna-ns3-sim-test");
+  string strategy ("luna-ns3-sim");
+  string input;
+  string runID;
+  string format ("omnet");
+
+/*
+  sqlite3 *db;
+    char *zErrMsg = 0;
+    int rc;
+  
+    rc = sqlite3_open("testdb.db", &db);
+    if( rc ){
+      fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
+      sqlite3_close(db);
+      return(1);
+    }
+    rc = sqlite3_exec(db, argv[2], callback, 0, &zErrMsg);
+    if( rc!=SQLITE_OK ){
+      fprintf(stderr, "SQL error: %s\n", zErrMsg);
+      sqlite3_free(zErrMsg);
+    }
+    sqlite3_close(db);
+
+
+   string lineA;  
+   string filename; 
+   ifstream fileIN;
+
+  fileIN.open("testfile.data");
+ 
+  if(fileIN.fail()) {
+    cerr << "Error opening file"<<endl;
+    exit(1);
+  } 
+*/
+
+  string output_perfThroughput = "./scratch/perfThroughput.txt";
+  ifstream inputfile; 
+  ofstream outfile; 
+  
+  inputfile.open(output_perfThroughput.c_str());
+ /* 
+  if(inputfile == NULL) 
+  {
+  	cout<<"file do not exist.. create new file"<<endl;
+  	outfile.open(output_perfThroughput.c_str());
+  	outfile <<"This is my text\n"<<endl; 
+  	outfile.close();
+  }
+ else{
+        cout<<"File already exist"<<endl; 
+  
+  } 
+*/
+
+
   Time::SetResolution (Time::NS);
 
+
+  {
+    stringstream sstr;
+    sstr << "run-" << time (NULL);
+    runID = sstr.str ();
+  }
+
+
+  // Set up command line parameters used to control the experiment.
   CommandLine cmd;
   cmd.AddValue ("nSat", "Number of wifi STA devices, Satellites", nSat);
   cmd.AddValue ("packetSize", "Payload size", packetSize);
   cmd.AddValue ("numPackets", "Number of packets", numPackets);
   cmd.AddValue ("verbose", "Tell echo applications to log if true", verbose);
   cmd.AddValue ("tracing", "Enable pcap tracing", tracing);
+  cmd.AddValue ("format", "Format to use for data output.", format);  
+  cmd.AddValue ("experiment", "Identifier for experiment.", experiment);
+  cmd.AddValue ("strategy", "Identifier for strategy.", strategy);
+  cmd.AddValue ("run", "Identifier for run.", runID);
   cmd.Parse (argc,argv);
+
+
+  if (format != "omnet" && format != "db") {
+      NS_LOG_ERROR ("Unknown output format '" << format << "'");
+      return -1;
+    }
+
+  #ifndef STATS_HAS_SQLITE3
+  if (format == "db") {
+      NS_LOG_ERROR ("sqlite support not compiled in.");
+      return -1;
+    }
+  #endif
+
+ {
+    stringstream sstr ("");
+    sstr << nSat;
+    input = sstr.str ();
+  }
 
 
   if (verbose)
@@ -99,11 +215,23 @@ int main (int argc, char *argv[])
       LogComponentEnable ("UdpEchoServerApplication", LOG_LEVEL_INFO);
     }
 
+  cout<<"nSat:"<<nSat <<endl; 
+  cout<<"runID:"<<runID <<endl; 
 
-  /*Phase A: Setup environment*/
- 
-  //Step 1: create Nodes + AP
+  outfile.open(output_perfThroughput.c_str(), ios::app);
+  //outfile.open(output_perfThroughput.c_str());
+  outfile <<nSat<<"\t "<< nSat*4<<endl; 
+  outfile.close();
+
+
+
+  //return 0; 
+
+  /******************************************************
+  * Nodes + AP
+  *******************************************************/
   cout<<"Creating Nodes and AP ..."<<endl;
+  nWifi = nSub + nSat + nMobile;   	//total number of wireless nodes, excluding AP
 
   // Check for valid number of wifi nodes
   if (nWifi > maxNodes )
@@ -122,7 +250,9 @@ int main (int argc, char *argv[])
   cout<<"Nodes and AP created \n"<<endl;
 
 
-  //Step 2: Create Topology 
+  /******************************************************
+  * Topology: Channel & NetDevice
+  *******************************************************/
   cout<<"Creating Topology and creating network devices in nodes  ..."<<endl;
   YansWifiChannelHelper wifiChannel = YansWifiChannelHelper::Default ();
   //wifiChannel.SetPropagationDelay ("ns3::ConstantSpeedPropagationDelayModel");
@@ -149,12 +279,12 @@ int main (int argc, char *argv[])
                                 "DataMode",StringValue (phyMode),
                                 "ControlMode",StringValue (phyMode));
 
-/*
+  /*
   if (verbose)
     {
       wifi.EnableLogComponents ();  // Turn on all Wifi logging
     }
-*/
+  */
 
   NqosWifiMacHelper wifiMac = NqosWifiMacHelper::Default ();
   Ssid ssid = Ssid ("luna-airplay");
@@ -176,7 +306,9 @@ int main (int argc, char *argv[])
   apDevices = wifi.Install (wifiPhy, wifiMac, wifiApNode);
 
 
-
+  /******************************************************
+  * Internet Stack & Ipv4Address
+  *******************************************************/
   //Set up protocol stack
   cout<<"Setting up protocol stack and ipv4 address ..."<<endl;
   InternetStackHelper stack;
@@ -188,7 +320,8 @@ int main (int argc, char *argv[])
   Ipv4AddressHelper ipv4;
   Ipv4Address addr;
 
-  ipv4.SetBase ("10.1.1.0", "255.255.255.0");
+  //ipv4.SetBase ("10.1.1.0", "255.255.255.0");
+  ipv4.SetBase ("192.168.1.0", "255.255.255.0");
   Ipv4InterfaceContainer sta_interface; 
   Ipv4InterfaceContainer ap_interface;
   ap_interface = ipv4.Assign (apDevices);
@@ -208,7 +341,9 @@ int main (int argc, char *argv[])
  cout<<"IPv4 address setup completed \n"<<endl;
   
 
-  /*Setting up mobility*/
+  /******************************************************
+  * Node Mobibility
+  *******************************************************/
   MobilityHelper mobility;
   mobility.SetPositionAllocator ("ns3::GridPositionAllocator",
                                  "MinX", DoubleValue (0.0),
@@ -227,32 +362,57 @@ int main (int argc, char *argv[])
   //mobility.Install (wifiStaNodes.Get(0)); //set mobility model on mobile phone
    mobility.Install (wifiStaNodes); //set mobility  constant position  model on subwoofer and satellites
 
-  /*Phase B: Execute and simulate */
-  UdpEchoServerHelper echoServer (9);
-  //ApplicationContainer serverApps = echoServer.Install (wifiStaNodes.Get (nWifi-1)); //set server on sat
-  //ApplicationContainer serverApps = echoServer.Install (wifiStaNodes.Get (1)); //set server on sat
-  ApplicationContainer serverApps = echoServer.Install (wifiStaNodes.Get (0)); //set server on sat
+
+
+  /******************************************************
+  * Application & Simulation
+  *******************************************************/
+  uint16_t port = 4000;
+  UdpEchoServerHelper echoServer (port);
+  ApplicationContainer serverApps = echoServer.Install (wifiStaNodes.Get (0)); //set server on sat //1
   serverApps.Start (Seconds (1.0));
   serverApps.Stop (Seconds (10.0));
 
-  //UdpEchoClientHelper echoClient (sta_interface.GetAddress (nWifi-1), 9); 
-  //UdpEchoClientHelper echoClient (sta_interface.GetAddress (1), 9); 
-  UdpEchoClientHelper echoClient (sta_interface.GetAddress (0), 9); 
+  UdpEchoClientHelper echoClient (sta_interface.GetAddress (0), port); //1 
   echoClient.SetAttribute ("MaxPackets", UintegerValue(numPackets));
   echoClient.SetAttribute ("Interval", TimeValue (Seconds(interval)));
   echoClient.SetAttribute ("PacketSize", UintegerValue(packetSize));
   //echoClient.SetAttribute ("Interval", TimeValue (Time("0.002")));
 
-  //ApplicationContainer clientApps =  echoClient.Install (wifiStaNodes.Get (0)); //set client on mobile phone 
   ApplicationContainer clientApps =  echoClient.Install (wifiApNode.Get (0)); //set client on mobile phone 
   clientApps.Start (Seconds (2.0));
   clientApps.Stop (Seconds (10.0));
 
   Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
 
-  Simulator::Stop (Seconds (10.0));
+ 
+#ifdef Tester
+  //------------------------------------------------------------
+  //-- Create a custom traffic source and sink
+  //--------------------------------------------
+  NS_LOG_INFO ("Create traffic source & sink.");
+  Ptr<Node> appSource = NodeList::GetNode (0);
+  Ptr<Sender> sender = CreateObject<Sender>();
+  appSource->AddApplication (sender);
+  sender->SetStartTime (Seconds (1));
+
+  Ptr<Node> appSink = NodeList::GetNode (1);
+  Ptr<Receiver> receiver = CreateObject<Receiver>();
+  appSink->AddApplication (receiver);
+  receiver->SetStartTime (Seconds (0));
+
+ // Config::Set ("/NodeList/*/ApplicationList/*/$Sender/Destination",
+   //            Ipv4AddressValue ("10.1.1.2"));
+#endif 
+
+
+// Simulator::Stop (Seconds (10.0));
   
-  //Throughput calculated using Flowmon
+
+
+  /******************************************************
+  * Performance measurements
+  *******************************************************/
   FlowMonitorHelper flowmon; 
   Ptr<FlowMonitor>monitor=flowmon.InstallAll();
    
@@ -265,14 +425,120 @@ int main (int argc, char *argv[])
     }
 
 
+
+  //------------------------------------------------------------
+  //-- Setup stats and data collection
+  //--------------------------------------------
+  // Create a DataCollector object to hold information about this run.
+  DataCollector luna_ns3_sim_data;
+  luna_ns3_sim_data.DescribeRun (experiment,
+                    strategy,
+                    input,
+                    runID);
+
+
+  // Add any information we wish to record about this run.
+  luna_ns3_sim_data.AddMetadata ("author", "javier");
+
+
+  
+
+#ifdef TEST
+// Create a counter to track how many frames are generated.  Updates
+  // are triggered by the trace signal generated by the WiFi MAC model
+  // object.  Here we connect the counter to the signal via the simple
+  // TxCallback() glue function defined above.
+  Ptr<CounterCalculator<uint32_t> > totalTx =
+    CreateObject<CounterCalculator<uint32_t> >();
+  totalTx->SetKey ("wifi-tx-frames");
+  totalTx->SetContext ("node[0]");
+//  Config::Connect ("/NodeList/0/DeviceList/*/$ns3::WifiNetDevice/Mac/MacTx",
+ //                  MakeBoundCallback (&TxCallback, totalTx));
+  luna_ns3_sim_data.AddDataCalculator (totalTx);
+
+  // This is similar, but creates a counter to track how many frames
+  // are received.  Instead of our own glue function, this uses a
+  // method of an adapter class to connect a counter directly to the
+  // trace signal generated by the WiFi MAC.
+  Ptr<PacketCounterCalculator> totalRx =
+    CreateObject<PacketCounterCalculator>();
+ totalRx->SetKey ("wifi-rx-frames");
+  totalRx->SetContext ("node[1]");
+ // Config::Connect ("/NodeList/1/DeviceList/*/$ns3::WifiNetDevice/Mac/MacRx",
+ //                  MakeCallback (&PacketCounterCalculator::PacketUpdate,
+  //                               totalRx));
+  luna_ns3_sim_data.AddDataCalculator (totalRx);
+
+
+
+
+  // This counter tracks how many packets---as opposed to frames---are
+  // generated.  This is connected directly to a trace signal provided
+  // by our Sender class.
+  Ptr<PacketCounterCalculator> appTx =
+    CreateObject<PacketCounterCalculator>();
+  appTx->SetKey ("sender-tx-packets");
+  appTx->SetContext ("node[0]");
+ // Config::Connect ("/NodeList/0/ApplicationList/*/$Sender/Tx",
+ //                  MakeCallback (&PacketCounterCalculator::PacketUpdate,
+  //                               appTx));
+  luna_ns3_sim_data.AddDataCalculator (appTx);
+
+
+  // Here a counter for received packets is directly manipulated by
+  // one of the custom objects in our simulation, the Receiver
+  // Application.  The Receiver object is given a pointer to the
+  // counter and calls its Update() method whenever a packet arrives.
+  Ptr<CounterCalculator<> > appRx =
+    CreateObject<CounterCalculator<> >();
+  appRx->SetKey ("receiver-rx-packets");
+  appRx->SetContext ("node[1]");
+  receiver->SetCounter (appRx);
+  luna_ns3_sim_data.AddDataCalculator (appRx);
+
+ // This DataCalculator connects directly to the transmit trace
+  // provided by our Sender Application.  It records some basic
+  // statistics about the sizes of the packets received (min, max,
+  // avg, total # bytes), although in this scenaro they're fixed.
+  Ptr<PacketSizeMinMaxAvgTotalCalculator> appTxPkts =
+    CreateObject<PacketSizeMinMaxAvgTotalCalculator>();
+  appTxPkts->SetKey ("tx-pkt-size");
+  appTxPkts->SetContext ("node[0]");
+  //Config::Connect ("/NodeList/0/ApplicationList/*/$Sender/Tx",
+  //                 MakeCallback
+  //                   (&PacketSizeMinMaxAvgTotalCalculator::PacketUpdate,
+   //                  appTxPkts));
+  luna_ns3_sim_data.AddDataCalculator (appTxPkts);
+
+  // Here we directly manipulate another DataCollector tracking min,
+  // max, total, and average propagation delays.  Check out the Sender
+  // and Receiver classes to see how packets are tagged with
+  // timestamps to do this.
+  Ptr<TimeMinMaxAvgTotalCalculator> delayStat =
+    CreateObject<TimeMinMaxAvgTotalCalculator>();
+  delayStat->SetKey ("delay");
+  delayStat->SetContext (".");
+  receiver->SetDelayTracker (delayStat);
+  luna_ns3_sim_data.AddDataCalculator (delayStat);
+#endif 
+
+
+
+
   NS_LOG_INFO ("Run Simulation.");
+  Simulator::Stop (Seconds (10.0));
   Simulator::Run ();
 
 
+ //------------------------------------------------------------
+  //-- Generate FlowMonitor statistics output.
+  //--------------------------------------------
   monitor->CheckForLostPackets ();
 
   Ptr<Ipv4FlowClassifier> classifier = DynamicCast<Ipv4FlowClassifier> (flowmon.GetClassifier ());
   std::map<FlowId, FlowMonitor::FlowStats> stats = monitor->GetFlowStats ();
+
+  cout<<endl<<endl<<"**Performance analys**"<<endl;
   for (std::map<FlowId, FlowMonitor::FlowStats>::const_iterator i = stats.begin (); i != stats.end (); ++i)
     {
 	  Ipv4FlowClassifier::FiveTuple t = classifier->FindFlow (i->first);
@@ -282,14 +548,56 @@ int main (int argc, char *argv[])
           std::cout << "Flow " << i->first  << " (" << t.sourceAddress << " -> " << t.destinationAddress << ")\n";
           std::cout << "  Tx Bytes:   " << i->second.txBytes << "\n";
           std::cout << "  Rx Bytes:   " << i->second.rxBytes << "\n";
-      	  std::cout << "  Throughput: " << i->second.rxBytes * 8.0 / (i->second.timeLastRxPacket.GetSeconds() - i->second.timeFirstTxPacket.GetSeconds())/1024/1024  << " Mbps\n";
+      	 // std::cout << " Average Throughput: " << i->second.rxBytes * 8.0 / (i->second.timeLastRxPacket.GetSeconds() - i->second.timeFirstTxPacket.GetSeconds())/1024/1024  << " Mbps\n";
+      	  std::cout << " Average Throughput: " << i->second.rxBytes * 8.0 / (i->second.timeLastRxPacket.GetSeconds() - i->second.timeFirstTxPacket.GetSeconds())/1024/nWifi  << " kbps\n";
           //std::cout << " Delay : " << i->second.delaySum / i->second.rxPackets << "\n"; 
          // }
      }
 
   monitor->SerializeToXmlFile("luna.flowmon", true, true);
 
+
+
+
+/*
+ //------------------------------------------------------------
+  //-- Generate statistics output.
+  //--------------------------------------------
+
+  // Pick an output writer based in the requested format.
+  Ptr<DataOutputInterface> output = 0;
+  if (format == "omnet") {
+      NS_LOG_INFO ("Creating omnet formatted data output.");
+      output = CreateObject<OmnetDataOutput>();
+    } else if (format == "db") {
+    #ifdef STATS_HAS_SQLITE3
+      NS_LOG_INFO ("Creating sqlite formatted data output.");
+      output = CreateObject<SqliteDataOutput>();
+    #endif
+    } else {
+      NS_LOG_ERROR ("Unknown output format " << format);
+    }
+
+  // Finally, have that writer interrogate the DataCollector and save
+  // the results.
+  if (output != 0)
+    output->Output (luna_ns3_sim_data);
+
+*/
+
+
+
+
+
+
+
+
   Simulator::Destroy ();
+
+
+
+
+
   
   cout<<"program done "<<endl;
   return 0;
