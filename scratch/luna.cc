@@ -91,23 +91,36 @@ void TxCallback (Ptr<CounterCalculator<uint32_t> > datac,
 
 
 
-
 void writeVectorToFile(string filename, vector <string> strVector)
 {
-  fstream outfile; 
-  outfile.open(filename.c_str(), fstream::in |  fstream::out);
+  ofstream file; 
+  file.open(filename.c_str());
 
+  cout<<"testing file results"<<endl; 
+  cout<<filename<<endl; 
   for(uint32_t i = 0; i < strVector.size(); i++){
-      outfile << strVector[i] << endl;
+      file << strVector[i] << endl;
+      cout<< strVector[i] << endl;
    }
-  outfile.close(); 
+  file.close(); 
 
 }
+
 
 string convertFloatToString (float number){
     ostringstream buff;
     buff<<number;
     return buff.str();   
+}
+
+void printVector(vector<string> dataVector)
+{
+
+  for(uint32_t i = 0; i < dataVector.size(); i++){
+      cout << "value of vec [" << i << "] = " << dataVector[i] << endl;
+   }
+
+
 }
 
 
@@ -137,13 +150,16 @@ int main (int argc, char *argv[])
   string format ("omnet");
 
 
+  fstream file; 
+  ifstream infile; 
+  ofstream outfile; 
   string output_perfThroughput = "./scratch/perfThroughput.txt";
-  fstream outfile; 
+  vector<string> strVector; 
+  string line;
+  uint32_t number_of_lines=0;
   
   Time::SetResolution (Time::NS);
 
-
-  vector<string> strVector; 
 
 
   {
@@ -200,14 +216,11 @@ int main (int argc, char *argv[])
   cout<< "trialID char:"<<trialID_char<<"  size:"<<sizeof(trialID_char) <<endl;  
   char array [2]= {}; 
   array [0] = (char)trialID_char; 
-  //array [0] = '2'; 
   int trialID = atoi(array); 
   int col = trialID; 
   int row= nSat;
   cout<<"col:"<<col<<" "<<"row:"<<row<<endl;
 
-  string line;
-  uint32_t number_of_lines=0;
 
   float   avgThroughput;
 
@@ -215,11 +228,11 @@ int main (int argc, char *argv[])
 /********************************************
 *check how many lines file has
 *********************************************/
-  fstream tempfile; 
-  tempfile.open(output_perfThroughput.c_str(), fstream::in | fstream::out);
+  ifstream tempfile; 
+  tempfile.open(output_perfThroughput.c_str());
   if(tempfile == NULL) 
   {
-  	cout<<"error opening file for counting"<<endl;
+  	cout<<"error opening file for counting or file does not exist "<<endl;
         number_of_lines=0;
   	
   }
@@ -236,60 +249,33 @@ int main (int argc, char *argv[])
  } 
 
 
+
 /********************************************
 *check how to write data in text. new row and/or new column 
 *********************************************/
-      // Create a vector iterator
-       vector<string>::iterator it;
+  // Create a vector iterator
+  vector<string>::iterator it;
 
-// Loop through the vector from start to end and print out the string
+  // Loop through the vector from start to end and print out the string
 
-        // the iterator is pointing to.
+  // the iterator is pointing to.
 
-        for (it = strVector.begin(); it < strVector.end(); it++) {
+ if(number_of_lines >=1) 
+ { 
+	  for (it = strVector.begin(); it < strVector.end(); it++) {
 
-            cout << *it << endl;
+	    cout << *it << endl;
 
-        }
-
+	  }
 
   for(uint32_t i = 0; i < strVector.size(); i++){
       cout << "value of vec [" << i << "] = " << strVector[i] << endl;
    }
 
-//   strVector[1].append("   32");
-
-  for(uint32_t i = 0; i < strVector.size(); i++){
-      cout << "new value of vec [" << i << "] = " << strVector[i] << endl;
-   }
-
-
-/*
-  outfile.open(output_perfThroughput.c_str(), fstream::in |  fstream::out);
-    
-  for(uint32_t i = 0; i < strVector.size(); i++){
-      outfile << strVector[i] << endl;
-   }
-  outfile.close();
-*/
-
-
+ } 
   
   cout<<".........................................."<<endl;
 
-
- /* cout<<"reading"<<endl;
-  while(getline(outfile,line))
-  {
-    cout<<line<<".."<<endl;
-  }
- */
-  //outfile <<nSat<<"\t "<< nSat*4<<endl; 
- // outfile.close();
-
-
-
-  //return 0; 
 
   /******************************************************
   * Nodes + AP
@@ -450,25 +436,6 @@ int main (int argc, char *argv[])
   Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
 
  
-#ifdef Tester
-  //------------------------------------------------------------
-  //-- Create a custom traffic source and sink
-  //--------------------------------------------
-  NS_LOG_INFO ("Create traffic source & sink.");
-  Ptr<Node> appSource = NodeList::GetNode (0);
-  Ptr<Sender> sender = CreateObject<Sender>();
-  appSource->AddApplication (sender);
-  sender->SetStartTime (Seconds (1));
-
-  Ptr<Node> appSink = NodeList::GetNode (1);
-  Ptr<Receiver> receiver = CreateObject<Receiver>();
-  appSink->AddApplication (receiver);
-  receiver->SetStartTime (Seconds (0));
-
- // Config::Set ("/NodeList/*/ApplicationList/*/$Sender/Destination",
-   //            Ipv4AddressValue ("10.1.1.2"));
-#endif 
-
 
 // Simulator::Stop (Seconds (10.0));
   
@@ -505,89 +472,6 @@ int main (int argc, char *argv[])
   luna_ns3_sim_data.AddMetadata ("author", "javier");
 
 
-  
-
-#ifdef TEST
-// Create a counter to track how many frames are generated.  Updates
-  // are triggered by the trace signal generated by the WiFi MAC model
-  // object.  Here we connect the counter to the signal via the simple
-  // TxCallback() glue function defined above.
-  Ptr<CounterCalculator<uint32_t> > totalTx =
-    CreateObject<CounterCalculator<uint32_t> >();
-  totalTx->SetKey ("wifi-tx-frames");
-  totalTx->SetContext ("node[0]");
-//  Config::Connect ("/NodeList/0/DeviceList/*/$ns3::WifiNetDevice/Mac/MacTx",
- //                  MakeBoundCallback (&TxCallback, totalTx));
-  luna_ns3_sim_data.AddDataCalculator (totalTx);
-
-  // This is similar, but creates a counter to track how many frames
-  // are received.  Instead of our own glue function, this uses a
-  // method of an adapter class to connect a counter directly to the
-  // trace signal generated by the WiFi MAC.
-  Ptr<PacketCounterCalculator> totalRx =
-    CreateObject<PacketCounterCalculator>();
- totalRx->SetKey ("wifi-rx-frames");
-  totalRx->SetContext ("node[1]");
- // Config::Connect ("/NodeList/1/DeviceList/*/$ns3::WifiNetDevice/Mac/MacRx",
- //                  MakeCallback (&PacketCounterCalculator::PacketUpdate,
-  //                               totalRx));
-  luna_ns3_sim_data.AddDataCalculator (totalRx);
-
-
-
-
-  // This counter tracks how many packets---as opposed to frames---are
-  // generated.  This is connected directly to a trace signal provided
-  // by our Sender class.
-  Ptr<PacketCounterCalculator> appTx =
-    CreateObject<PacketCounterCalculator>();
-  appTx->SetKey ("sender-tx-packets");
-  appTx->SetContext ("node[0]");
- // Config::Connect ("/NodeList/0/ApplicationList/*/$Sender/Tx",
- //                  MakeCallback (&PacketCounterCalculator::PacketUpdate,
-  //                               appTx));
-  luna_ns3_sim_data.AddDataCalculator (appTx);
-
-
-  // Here a counter for received packets is directly manipulated by
-  // one of the custom objects in our simulation, the Receiver
-  // Application.  The Receiver object is given a pointer to the
-  // counter and calls its Update() method whenever a packet arrives.
-  Ptr<CounterCalculator<> > appRx =
-    CreateObject<CounterCalculator<> >();
-  appRx->SetKey ("receiver-rx-packets");
-  appRx->SetContext ("node[1]");
-  receiver->SetCounter (appRx);
-  luna_ns3_sim_data.AddDataCalculator (appRx);
-
- // This DataCalculator connects directly to the transmit trace
-  // provided by our Sender Application.  It records some basic
-  // statistics about the sizes of the packets received (min, max,
-  // avg, total # bytes), although in this scenaro they're fixed.
-  Ptr<PacketSizeMinMaxAvgTotalCalculator> appTxPkts =
-    CreateObject<PacketSizeMinMaxAvgTotalCalculator>();
-  appTxPkts->SetKey ("tx-pkt-size");
-  appTxPkts->SetContext ("node[0]");
-  //Config::Connect ("/NodeList/0/ApplicationList/*/$Sender/Tx",
-  //                 MakeCallback
-  //                   (&PacketSizeMinMaxAvgTotalCalculator::PacketUpdate,
-   //                  appTxPkts));
-  luna_ns3_sim_data.AddDataCalculator (appTxPkts);
-
-  // Here we directly manipulate another DataCollector tracking min,
-  // max, total, and average propagation delays.  Check out the Sender
-  // and Receiver classes to see how packets are tagged with
-  // timestamps to do this.
-  Ptr<TimeMinMaxAvgTotalCalculator> delayStat =
-    CreateObject<TimeMinMaxAvgTotalCalculator>();
-  delayStat->SetKey ("delay");
-  delayStat->SetContext (".");
-  receiver->SetDelayTracker (delayStat);
-  luna_ns3_sim_data.AddDataCalculator (delayStat);
-#endif 
-
-
-
 
   NS_LOG_INFO ("Run Simulation.");
   Simulator::Stop (Seconds (10.0));
@@ -606,37 +490,52 @@ int main (int argc, char *argv[])
   for (std::map<FlowId, FlowMonitor::FlowStats>::const_iterator i = stats.begin (); i != stats.end (); ++i)
     {
 	  Ipv4FlowClassifier::FiveTuple t = classifier->FindFlow (i->first);
-      //if ((t.sourceAddress=="10.1.1.1" && t.destinationAddress == "10.1.1.7"))
-      //if ((t.sourceAddress=="10.1.1.1") )
-     // {
           cout << "Flow " << i->first  << " (" << t.sourceAddress << " -> " << t.destinationAddress << ")\n";
           cout << "  Tx Bytes:   " << i->second.txBytes << "\n";
           cout << "  Rx Bytes:   " << i->second.rxBytes << "\n";
-      	  //std::cout << " Average Throughput: " << i->second.rxBytes * 8.0 / (i->second.timeLastRxPacket.GetSeconds() - i->second.timeFirstTxPacket.GetSeconds())/1024/nWifi  << " kbps\n";
           avgThroughput=i->second.rxBytes * 8.0 / (i->second.timeLastRxPacket.GetSeconds() - i->second.timeFirstTxPacket.GetSeconds())/1024/nWifi ;
       	  cout << " Average Throughput: " << avgThroughput << " kbps\n";
-         // }
      }
 
   monitor->SerializeToXmlFile("luna.flowmon", true, true);
 
   string temp;
   temp = convertFloatToString(avgThroughput);
-
-  strVector[1].append("  ");
-  strVector[1].append(temp);
-
+    //ostringstream buff;
+    // buff<<avgThroughput;
+    // temp= buff.str();   
   
-  //outfile.open(output_perfThroughput.c_str(), fstream::in |  fstream::out);
-   
-  writeVectorToFile(output_perfThroughput.c_str(),strVector);
  
- /*
- for(uint32_t i = 0; i < strVector.size(); i++){
-      outfile << strVector[i] << endl;
-   }
-  outfile.close();
-*/ 
+  if(nSat > number_of_lines){
+     cout<< "push_Back"<<endl;
+     strVector.push_back(temp);
+
+
+
+
+
+  }
+  else if(nSat <= number_of_lines && nSat !=0){
+     cout<<"vector append"<<endl;
+     strVector[nSat-1].append("  ");
+     strVector[nSat-1].append(temp);
+
+   printVector(strVector); 
+ }
+   
+  
+  writeVectorToFile(output_perfThroughput.c_str(),strVector);
+
+/*
+  cout<<"-----------------------------------------------"<<endl; 
+        for (it = strVector.begin(); it < strVector.end(); it++) {
+
+            cout << *it << endl;
+
+        }
+ 
+  cout<<"-----------------------------------------------"<<endl; 
+ */
   
 /*
  //------------------------------------------------------------
