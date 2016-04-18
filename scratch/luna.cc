@@ -91,6 +91,26 @@ void TxCallback (Ptr<CounterCalculator<uint32_t> > datac,
 
 
 
+
+void writeVectorToFile(string filename, vector <string> strVector)
+{
+  fstream outfile; 
+  outfile.open(filename.c_str(), fstream::in |  fstream::out);
+
+  for(uint32_t i = 0; i < strVector.size(); i++){
+      outfile << strVector[i] << endl;
+   }
+  outfile.close(); 
+
+}
+
+string convertFloatToString (float number){
+    ostringstream buff;
+    buff<<number;
+    return buff.str();   
+}
+
+
 /******************************************************
 * main
 *******************************************************/
@@ -601,21 +621,22 @@ int main (int argc, char *argv[])
   monitor->SerializeToXmlFile("luna.flowmon", true, true);
 
   string temp;
-   ostringstream buff;
-    buff<<avgThroughput;
-    temp= buff.str();   
+  temp = convertFloatToString(avgThroughput);
 
   strVector[1].append("  ");
   strVector[1].append(temp);
 
   
-  outfile.open(output_perfThroughput.c_str(), fstream::in |  fstream::out);
-    
-  for(uint32_t i = 0; i < strVector.size(); i++){
+  //outfile.open(output_perfThroughput.c_str(), fstream::in |  fstream::out);
+   
+  writeVectorToFile(output_perfThroughput.c_str(),strVector);
+ 
+ /*
+ for(uint32_t i = 0; i < strVector.size(); i++){
       outfile << strVector[i] << endl;
    }
   outfile.close();
-
+*/ 
   
 /*
  //------------------------------------------------------------
