@@ -43,6 +43,7 @@
 #include <string>
 #include <stdio.h>
 #include <iomanip>
+#include <vector> 
 
 // Default Network Topology
 //
@@ -115,41 +116,14 @@ int main (int argc, char *argv[])
   string runID;
   string format ("omnet");
 
-/*
-  sqlite3 *db;
-    char *zErrMsg = 0;
-    int rc;
-  
-    rc = sqlite3_open("testdb.db", &db);
-    if( rc ){
-      fprintf(stderr, "Can't open database: %s\n", sqlite3_errmsg(db));
-      sqlite3_close(db);
-      return(1);
-    }
-    rc = sqlite3_exec(db, argv[2], callback, 0, &zErrMsg);
-    if( rc!=SQLITE_OK ){
-      fprintf(stderr, "SQL error: %s\n", zErrMsg);
-      sqlite3_free(zErrMsg);
-    }
-    sqlite3_close(db);
-
-
-   string lineA;  
-   string filename; 
-   ifstream fileIN;
-
-  fileIN.open("testfile.data");
- 
-  if(fileIN.fail()) {
-    cerr << "Error opening file"<<endl;
-    exit(1);
-  } 
-*/
 
   string output_perfThroughput = "./scratch/perfThroughput.txt";
   fstream outfile; 
   
   Time::SetResolution (Time::NS);
+
+
+  vector<string> strVector; 
 
 
   {
@@ -198,45 +172,160 @@ int main (int argc, char *argv[])
       LogComponentEnable ("UdpEchoServerApplication", LOG_LEVEL_INFO);
     }
 
+  cout<<".........................................."<<endl;
   cout<<"nSat:"<<nSat <<endl; 
   cout<<"runID:"<<runID <<endl; 
   
-  //int runIDSize;
-  //runIDSize = runID.size();
-  //char *runIDChar = (char *)runID.c_str(); 
-  //cout<<runIDChar[runIDSize-1]<<endl; 
-  //cout<<runID.at(runID.size()-1)<<"...."<<endl;
-
   char trialID_char  =runID.at(runID.size()-1);
   cout<< "trialID char:"<<trialID_char<<"  size:"<<sizeof(trialID_char) <<endl;  
   char array [2]= {}; 
   array [0] = (char)trialID_char; 
   //array [0] = '2'; 
   int trialID = atoi(array); 
-  int row = trialID; 
-  int col= nSat;
-  //char row = runIDChar[runIDSize-1];
+  int col = trialID; 
+  int row= nSat;
   cout<<"col:"<<col<<" "<<"row:"<<row<<endl;
 
+  string line;
+  uint32_t number_of_lines=0;
 
-  //string test2 =  (char *)(runID.at(runID.size()-1));
- // string test2 =  (const char *)(runID.at(6));
- // int trialID = atoi(test2.c_str()); 
+/********************************************
+*check how many lines file has
+*********************************************/
+  fstream tempfile; 
+  tempfile.open(output_perfThroughput.c_str(), fstream::in | fstream::out);
+  if(tempfile == NULL) 
+  {
+  	cout<<"error opening file for counting"<<endl;
+        number_of_lines=0;
+  	
+  }
+  else 
+  { 
+	  while (getline(tempfile, line)){
+              ++number_of_lines;
+              strVector.push_back(line); 
+          } 
 
-  //int trialID = atoi((runID.at(runID.size()-1)).c_str()); 
-  //string test="32";
-  //int trialID = atoi(test.c_str()); 
-  //cout<< "converted trial id to int"<<trialID<<" "<<trialID_char<<endl;    
-  //outfile.open(output_perfThroughput.c_str(), fstream::in |fstream::binary | fstream::ate| fstream::out);
+	  std::cout << "Number of lines in text file: " << number_of_lines<<endl;
+
+	  tempfile.close(); 
+ } 
+
+
+/********************************************
+*check how to write data in text. new row and/or new column 
+*********************************************/
+      // Create a vector iterator
+       vector<string>::iterator it;
+
+// Loop through the vector from start to end and print out the string
+
+        // the iterator is pointing to.
+
+        for (it = strVector.begin(); it < strVector.end(); it++) {
+
+            cout << *it << endl;
+
+        }
+
+
+  for(uint32_t i = 0; i < strVector.size(); i++){
+      cout << "value of vec [" << i << "] = " << strVector[i] << endl;
+   }
+
+ strVector[1].append("   32");
+
+  for(uint32_t i = 0; i < strVector.size(); i++){
+      cout << "new value of vec [" << i << "] = " << strVector[i] << endl;
+   }
+
+
+
+  outfile.open(output_perfThroughput.c_str(), fstream::in |  fstream::out);
+    
+  for(uint32_t i = 0; i < strVector.size(); i++){
+      outfile << strVector[i] << endl;
+   }
+  outfile.close();
+
+
+return 0;
+
+/*option b  */
+ if(nSat > number_of_lines) {
+  cout<<"New experiment for trail 1"<<endl; 
+  outfile.open(output_perfThroughput.c_str(), fstream::in | fstream::app| fstream::out);
+
+  if(outfile == NULL) 
+  {
+  	cout<<"error opening file"<<endl;
+  	return -1;
+  }
+  outfile <<nSat<<" "<<" "<<" "<< nSat*4<<endl; 
+  outfile.close();
+
+ }
+ else if (nSat <= number_of_lines) {
+  cout<<"New trial for previous experiment"<<endl; 
   outfile.open(output_perfThroughput.c_str(), fstream::in | fstream::out);
+
   if(outfile == NULL) 
   {
   	cout<<"error opening file"<<endl;
   	return -1;
   }
 
-  string line; 
-  getline(outfile,line);
+  //read file and skip lines until line representing current #Sat 
+   uint32_t curLine_numb=0;
+   //while (getline(outfile, line)){
+   while (getline(outfile, line)){
+     curLine_numb ++;  
+     cout<<"current line number:"<<curLine_numb<<endl;
+
+    if(curLine_numb == nSat){
+       cout<<"line destination reached"<<endl;
+       cout<<"line number:"<<curLine_numb<<" "<<"nSat:"<<nSat<<endl;
+
+
+	//read current line 
+	string data_line = line;  
+        uint32_t temp; 
+        temp=line.size();
+	cout<<"read sting\n "<<data_line<<endl;
+
+	//append new data column  
+	//int perf=3; 
+	data_line.append("   "); 
+	data_line.append("3"); 
+	cout<<"to output data string\n "<<data_line<<endl;
+
+
+	//replace dataline in file  
+       line= data_line;
+       cout<<"size of line"<<temp<<endl;  
+       outfile.seekp(-(temp),fstream::end);
+       outfile<<line<<endl; 
+
+
+
+
+      break;  
+     }
+  
+    
+
+
+   }
+
+
+
+
+ } 
+
+  
+  cout<<".........................................."<<endl;
+
 
  /* cout<<"reading"<<endl;
   while(getline(outfile,line))
@@ -245,7 +334,7 @@ int main (int argc, char *argv[])
   }
  */
   //outfile <<nSat<<"\t "<< nSat*4<<endl; 
-  outfile.close();
+ // outfile.close();
 
 
 
