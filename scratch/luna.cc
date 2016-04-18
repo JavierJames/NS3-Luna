@@ -189,6 +189,9 @@ int main (int argc, char *argv[])
   string line;
   uint32_t number_of_lines=0;
 
+  float   avgThroughput;
+
+
 /********************************************
 *check how many lines file has
 *********************************************/
@@ -234,94 +237,22 @@ int main (int argc, char *argv[])
       cout << "value of vec [" << i << "] = " << strVector[i] << endl;
    }
 
- strVector[1].append("   32");
+//   strVector[1].append("   32");
 
   for(uint32_t i = 0; i < strVector.size(); i++){
       cout << "new value of vec [" << i << "] = " << strVector[i] << endl;
    }
 
 
-
+/*
   outfile.open(output_perfThroughput.c_str(), fstream::in |  fstream::out);
     
   for(uint32_t i = 0; i < strVector.size(); i++){
       outfile << strVector[i] << endl;
    }
   outfile.close();
+*/
 
-
-return 0;
-
-/*option b  */
- if(nSat > number_of_lines) {
-  cout<<"New experiment for trail 1"<<endl; 
-  outfile.open(output_perfThroughput.c_str(), fstream::in | fstream::app| fstream::out);
-
-  if(outfile == NULL) 
-  {
-  	cout<<"error opening file"<<endl;
-  	return -1;
-  }
-  outfile <<nSat<<" "<<" "<<" "<< nSat*4<<endl; 
-  outfile.close();
-
- }
- else if (nSat <= number_of_lines) {
-  cout<<"New trial for previous experiment"<<endl; 
-  outfile.open(output_perfThroughput.c_str(), fstream::in | fstream::out);
-
-  if(outfile == NULL) 
-  {
-  	cout<<"error opening file"<<endl;
-  	return -1;
-  }
-
-  //read file and skip lines until line representing current #Sat 
-   uint32_t curLine_numb=0;
-   //while (getline(outfile, line)){
-   while (getline(outfile, line)){
-     curLine_numb ++;  
-     cout<<"current line number:"<<curLine_numb<<endl;
-
-    if(curLine_numb == nSat){
-       cout<<"line destination reached"<<endl;
-       cout<<"line number:"<<curLine_numb<<" "<<"nSat:"<<nSat<<endl;
-
-
-	//read current line 
-	string data_line = line;  
-        uint32_t temp; 
-        temp=line.size();
-	cout<<"read sting\n "<<data_line<<endl;
-
-	//append new data column  
-	//int perf=3; 
-	data_line.append("   "); 
-	data_line.append("3"); 
-	cout<<"to output data string\n "<<data_line<<endl;
-
-
-	//replace dataline in file  
-       line= data_line;
-       cout<<"size of line"<<temp<<endl;  
-       outfile.seekp(-(temp),fstream::end);
-       outfile<<line<<endl; 
-
-
-
-
-      break;  
-     }
-  
-    
-
-
-   }
-
-
-
-
- } 
 
   
   cout<<".........................................."<<endl;
@@ -658,24 +589,45 @@ return 0;
       //if ((t.sourceAddress=="10.1.1.1" && t.destinationAddress == "10.1.1.7"))
       //if ((t.sourceAddress=="10.1.1.1") )
      // {
-          std::cout << "Flow " << i->first  << " (" << t.sourceAddress << " -> " << t.destinationAddress << ")\n";
-          std::cout << "  Tx Bytes:   " << i->second.txBytes << "\n";
-          std::cout << "  Rx Bytes:   " << i->second.rxBytes << "\n";
-      	 // std::cout << " Average Throughput: " << i->second.rxBytes * 8.0 / (i->second.timeLastRxPacket.GetSeconds() - i->second.timeFirstTxPacket.GetSeconds())/1024/1024  << " Mbps\n";
-      	  std::cout << " Average Throughput: " << i->second.rxBytes * 8.0 / (i->second.timeLastRxPacket.GetSeconds() - i->second.timeFirstTxPacket.GetSeconds())/1024/nWifi  << " kbps\n";
-          //std::cout << " Delay : " << i->second.delaySum / i->second.rxPackets << "\n"; 
+          cout << "Flow " << i->first  << " (" << t.sourceAddress << " -> " << t.destinationAddress << ")\n";
+          cout << "  Tx Bytes:   " << i->second.txBytes << "\n";
+          cout << "  Rx Bytes:   " << i->second.rxBytes << "\n";
+      	  //std::cout << " Average Throughput: " << i->second.rxBytes * 8.0 / (i->second.timeLastRxPacket.GetSeconds() - i->second.timeFirstTxPacket.GetSeconds())/1024/nWifi  << " kbps\n";
+          avgThroughput=i->second.rxBytes * 8.0 / (i->second.timeLastRxPacket.GetSeconds() - i->second.timeFirstTxPacket.GetSeconds())/1024/nWifi ;
+      	  cout << " Average Throughput: " << avgThroughput << " kbps\n";
          // }
      }
 
   monitor->SerializeToXmlFile("luna.flowmon", true, true);
 
+  string temp;
+   ostringstream buff;
+    buff<<avgThroughput;
+    temp= buff.str();   
 
+  strVector[1].append("  ");
+  strVector[1].append(temp);
 
+  
+  outfile.open(output_perfThroughput.c_str(), fstream::in |  fstream::out);
+    
+  for(uint32_t i = 0; i < strVector.size(); i++){
+      outfile << strVector[i] << endl;
+   }
+  outfile.close();
 
+  
 /*
  //------------------------------------------------------------
   //-- Generate statistics output.
   //--------------------------------------------
+  
+  
+
+
+
+
+
 
   // Pick an output writer based in the requested format.
   Ptr<DataOutputInterface> output = 0;
