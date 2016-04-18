@@ -147,25 +147,8 @@ int main (int argc, char *argv[])
 */
 
   string output_perfThroughput = "./scratch/perfThroughput.txt";
-  ifstream inputfile; 
-  ofstream outfile; 
+  fstream outfile; 
   
-  inputfile.open(output_perfThroughput.c_str());
- /* 
-  if(inputfile == NULL) 
-  {
-  	cout<<"file do not exist.. create new file"<<endl;
-  	outfile.open(output_perfThroughput.c_str());
-  	outfile <<"This is my text\n"<<endl; 
-  	outfile.close();
-  }
- else{
-        cout<<"File already exist"<<endl; 
-  
-  } 
-*/
-
-
   Time::SetResolution (Time::NS);
 
 
@@ -217,10 +200,51 @@ int main (int argc, char *argv[])
 
   cout<<"nSat:"<<nSat <<endl; 
   cout<<"runID:"<<runID <<endl; 
+  
+  //int runIDSize;
+  //runIDSize = runID.size();
+  //char *runIDChar = (char *)runID.c_str(); 
+  //cout<<runIDChar[runIDSize-1]<<endl; 
+  //cout<<runID.at(runID.size()-1)<<"...."<<endl;
 
-  outfile.open(output_perfThroughput.c_str(), ios::app);
-  //outfile.open(output_perfThroughput.c_str());
-  outfile <<nSat<<"\t "<< nSat*4<<endl; 
+  char trialID_char  =runID.at(runID.size()-1);
+  cout<< "trialID char:"<<trialID_char<<"  size:"<<sizeof(trialID_char) <<endl;  
+  char array [2]= {}; 
+  array [0] = (char)trialID_char; 
+  //array [0] = '2'; 
+  int trialID = atoi(array); 
+  int row = trialID; 
+  int col= nSat;
+  //char row = runIDChar[runIDSize-1];
+  cout<<"col:"<<col<<" "<<"row:"<<row<<endl;
+
+
+  //string test2 =  (char *)(runID.at(runID.size()-1));
+ // string test2 =  (const char *)(runID.at(6));
+ // int trialID = atoi(test2.c_str()); 
+
+  //int trialID = atoi((runID.at(runID.size()-1)).c_str()); 
+  //string test="32";
+  //int trialID = atoi(test.c_str()); 
+  //cout<< "converted trial id to int"<<trialID<<" "<<trialID_char<<endl;    
+  //outfile.open(output_perfThroughput.c_str(), fstream::in |fstream::binary | fstream::ate| fstream::out);
+  outfile.open(output_perfThroughput.c_str(), fstream::in | fstream::out);
+  if(outfile == NULL) 
+  {
+  	cout<<"error opening file"<<endl;
+  	return -1;
+  }
+
+  string line; 
+  getline(outfile,line);
+
+ /* cout<<"reading"<<endl;
+  while(getline(outfile,line))
+  {
+    cout<<line<<".."<<endl;
+  }
+ */
+  //outfile <<nSat<<"\t "<< nSat*4<<endl; 
   outfile.close();
 
 
