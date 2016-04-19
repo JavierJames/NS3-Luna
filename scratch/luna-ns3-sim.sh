@@ -10,8 +10,8 @@ DATABASE_NAME="luna-ns3"
 #TRIALS="1 2"
 #nSAT="1 2"
 
-TRIALS="1"
-nSAT="1 2 3 4 "
+TRIALS="1 2  "
+nSAT="1 2 3"
 
 echo Luna NS3 Simulation
 

@@ -36,6 +36,7 @@
 #include <fstream>
 #include <vector>
 #include <string>
+#include <string.h>
 #include <ctime>
 #include <sstream>
 
@@ -228,6 +229,64 @@ vector<string> fetchDataFromFile (string filename, uint32_t *lineNumbers)
 
 }
 
+vector<string> calculateAvg(vector<string> data)
+{
+
+  unsigned int size;
+
+  size=data.size();
+  string parameterString;
+  //float array [size-1];
+  int wordNum;
+  vector<string> tempVec;
+
+   vector<string> results;
+
+ for(unsigned int i=0; i< size; i++)
+ {
+        //read the line 
+        stringstream ss(data[i]);
+        string word;
+        unsigned int length;
+        float sum=0;
+        float numbers;
+        float avg;
+
+        length = data[i].length();
+
+        float array[length];
+        //float array[7]; 
+
+        for (wordNum = 0; ss >> word; wordNum++)
+        {
+                if(wordNum==0){
+                        parameterString=word;
+                }
+                else{
+                        cout << " " << wordNum << "." << word<<endl;
+                        array[wordNum-1]=stof(word);
+               }
+        }
+
+        cout<<"float results:"<<endl;
+        numbers = wordNum-1;
+        for(int i=0; i<numbers; i++)
+        {
+                sum += array[i];
+                cout<<"array["<<i<<"]: "<<array[i]<<endl;
+        }
+       avg= sum/numbers;
+       cout<<"avg ="<<avg<<" = "<<sum<<" /"<<numbers<<endl;
+
+      results =  addNewResults(results, parameterString, convertFloatToString(avg));
+
+
+  }
+
+ return results;
+
+
+}
 
 
 
@@ -268,6 +327,7 @@ int main (int argc, char *argv[])
   fstream file2; 
   ifstream infile2; 
   string output_perfThroughput = "./scratch/perfThroughput.txt";
+  string output_perfThroughputAvg = "./scratch/perfThroughputAvg.txt";
   string output_perfThroughput2 = "./scratch/perfThroughput2.txt";
   vector<string> strVector; 
   string line;
@@ -277,6 +337,10 @@ int main (int argc, char *argv[])
 vector<string> tempVec = strVector;
   
   Time::SetResolution (Time::NS);
+
+
+
+
 
 
 
@@ -591,7 +655,20 @@ printVector(strVector);
 writeVectorToFile(output_perfThroughput.c_str(),strVector);
 
 
+vector<string> strVectorAvg;
+ strVectorAvg= calculateAvg(strVector);
+cout<<"printing AVG "<<endl;
+printVector(strVectorAvg);
+
+writeVectorToFile(output_perfThroughputAvg.c_str(),strVectorAvg);
+
+
+
+
+
   Simulator::Destroy ();
+
+
 
 
 
