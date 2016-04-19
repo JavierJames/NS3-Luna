@@ -45,6 +45,10 @@
 #include <iomanip>
 #include <vector> 
 
+#include <utility>
+#include <complex>
+//#include <tuple>
+
 // Default Network Topology
 //
 // Number of wifi or csma nodes can be increased up to 250
@@ -113,6 +117,14 @@ string convertFloatToString (float number){
     return buff.str();   
 }
 
+string convertUintToString (uint32_t number){
+    ostringstream buff;
+    buff<<number;
+    return buff.str();
+}
+
+
+
 void printVector(vector<string> dataVector)
 {
 
@@ -122,6 +134,106 @@ void printVector(vector<string> dataVector)
 
 
 }
+
+int findParameterIndex(vector<string> data, string parameter)
+{
+  uint32_t size;
+
+  size=data.size();
+  int index=-1;
+
+cout<<"string received: "<<parameter<<endl;
+
+ for(uint32_t i=0; i< size; i++)
+ {
+        stringstream ss(data[i]);
+        string word;
+
+       ss>>word;
+      cout<<"word: "<<" "<<word<<endl;
+     cout<<"parameter: " <<parameter<<endl;
+
+    if( parameter.compare(word) == 0)
+    {
+     cout<<"paramter found in data"<<endl;
+      index= i;
+      break;
+    }
+ }
+   return index;
+
+}
+
+vector<string>  addNewResults(vector<string> vector, string parameter, string result)
+{
+
+  int index;
+  index =  findParameterIndex(vector,parameter);
+  cout<<"index of paramter: "<<index<<endl;
+  string line;
+
+
+  //parameter recorded before? 
+  if(vector.size()==0 || index == -1)
+  {
+     cout<<"first time storing parameter"<<endl;
+     line = parameter;
+     line.append("  ");
+     line.append(result);
+
+     vector.push_back(line);
+
+ }
+ else{
+     cout<<"appending new results to parameter"<<endl;
+   vector[index].append("  ");
+   vector[index].append(result);
+
+ }
+  return vector;
+
+}
+
+
+vector<string> fetchDataFromFile (string filename, uint32_t *lineNumbers)
+{
+
+  ifstream file;
+  file.open(filename.c_str());
+
+  string line;
+  vector<string> temp;
+
+  if(file == NULL)
+  {
+        cout<<"error opening file for counting or file does not exist "<<endl;
+        *lineNumbers=0;
+
+  }
+  else
+  {
+          while (getline(file, line)){
+              (*lineNumbers)= (*lineNumbers) +1 ;
+              temp.push_back(line);
+          }
+
+          //cout << "Number of lines in text file: " << *lineNumbers<<endl;
+
+          file.close();
+ }
+
+  return temp;
+
+
+
+}
+
+
+
+
+
+
+
 
 
 /******************************************************
@@ -153,10 +265,16 @@ int main (int argc, char *argv[])
   fstream file; 
   ifstream infile; 
   ofstream outfile; 
+  fstream file2; 
+  ifstream infile2; 
   string output_perfThroughput = "./scratch/perfThroughput.txt";
+  string output_perfThroughput2 = "./scratch/perfThroughput2.txt";
   vector<string> strVector; 
   string line;
   uint32_t number_of_lines=0;
+  vector < pair<int, string> > vectorPair;
+  pair<int,string> intStringData; 
+vector<string> tempVec = strVector;
   
   Time::SetResolution (Time::NS);
 
@@ -225,56 +343,18 @@ int main (int argc, char *argv[])
   float   avgThroughput;
 
 
-/********************************************
-*check how many lines file has
-*********************************************/
-  ifstream tempfile; 
-  tempfile.open(output_perfThroughput.c_str());
-  if(tempfile == NULL) 
-  {
-  	cout<<"error opening file for counting or file does not exist "<<endl;
-        number_of_lines=0;
-  	
-  }
-  else 
-  { 
-	  while (getline(tempfile, line)){
-              ++number_of_lines;
-              strVector.push_back(line); 
-          } 
-
-	  std::cout << "Number of lines in text file: " << number_of_lines<<endl;
-
-	  tempfile.close(); 
- } 
-
 
 
 /********************************************
-*check how to write data in text. new row and/or new column 
+*capture data from files & read number of lines
 *********************************************/
-  // Create a vector iterator
-  vector<string>::iterator it;
+strVector= fetchDataFromFile(output_perfThroughput.c_str(),&number_of_lines);
+cout<<"Data read from file "<<endl;
+printVector(strVector);
+cout<<"number of lines: "<<number_of_lines<<endl;
 
-  // Loop through the vector from start to end and print out the string
 
-  // the iterator is pointing to.
 
- if(number_of_lines >=1) 
- { 
-	  for (it = strVector.begin(); it < strVector.end(); it++) {
-
-	    cout << *it << endl;
-
-	  }
-
-  for(uint32_t i = 0; i < strVector.size(); i++){
-      cout << "value of vec [" << i << "] = " << strVector[i] << endl;
-   }
-
- } 
-  
-  cout<<".........................................."<<endl;
 
 
   /******************************************************
@@ -499,82 +579,16 @@ int main (int argc, char *argv[])
 
   monitor->SerializeToXmlFile("luna.flowmon", true, true);
 
-  string temp;
-  temp = convertFloatToString(avgThroughput);
-    //ostringstream buff;
-    // buff<<avgThroughput;
-    // temp= buff.str();   
-  
- 
-  if(nSat > number_of_lines){
-     cout<< "push_Back"<<endl;
-     strVector.push_back(temp);
 
+/*store new data in data vector */
+tempVec = strVector;
+strVector=  addNewResults(tempVec, convertUintToString(nSat),convertFloatToString(avgThroughput));
 
+cout<<"Data to store in file...."<<endl; 
+printVector(strVector);
 
-
-
-  }
-  else if(nSat <= number_of_lines && nSat !=0){
-     cout<<"vector append"<<endl;
-     strVector[nSat-1].append("  ");
-     strVector[nSat-1].append(temp);
-
-   printVector(strVector); 
- }
-   
-  
-  writeVectorToFile(output_perfThroughput.c_str(),strVector);
-
-/*
-  cout<<"-----------------------------------------------"<<endl; 
-        for (it = strVector.begin(); it < strVector.end(); it++) {
-
-            cout << *it << endl;
-
-        }
- 
-  cout<<"-----------------------------------------------"<<endl; 
- */
-  
-/*
- //------------------------------------------------------------
-  //-- Generate statistics output.
-  //--------------------------------------------
-  
-  
-
-
-
-
-
-
-  // Pick an output writer based in the requested format.
-  Ptr<DataOutputInterface> output = 0;
-  if (format == "omnet") {
-      NS_LOG_INFO ("Creating omnet formatted data output.");
-      output = CreateObject<OmnetDataOutput>();
-    } else if (format == "db") {
-    #ifdef STATS_HAS_SQLITE3
-      NS_LOG_INFO ("Creating sqlite formatted data output.");
-      output = CreateObject<SqliteDataOutput>();
-    #endif
-    } else {
-      NS_LOG_ERROR ("Unknown output format " << format);
-    }
-
-  // Finally, have that writer interrogate the DataCollector and save
-  // the results.
-  if (output != 0)
-    output->Output (luna_ns3_sim_data);
-
-*/
-
-
-
-
-
-
+/*store run results to file */
+writeVectorToFile(output_perfThroughput.c_str(),strVector);
 
 
   Simulator::Destroy ();
