@@ -10,8 +10,8 @@ DATABASE_NAME="luna-ns3"
 #TRIALS="1 2"
 #nSAT="1 2"
 
-TRIALS="1 2  "
-nSAT="1 2 3"
+TRIALS="1 2 3"
+nSAT="1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16"
 
 echo Luna NS3 Simulation
 
@@ -37,46 +37,36 @@ then
 fi
 
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:bin/
+#echo $PWD
+#if [ ! -f "perfThroughputAvg.txt"]
+#if [ -e "myfirst.cc" ]
+if [ -e "perfThroughputAvg.txt" ]
+then
+  echo "Kill perfThroughputAvg.txt? (y/n)"
+  read ANS
+  if [ "$ANS" = "yes" -o "$ANS" = "y" ]
+  then
+    echo Deleting database
+    rm ./perfThroughput.txt
+    rm ./perfThroughputAvg.txt
+  fi
+fi
 
-#if [ -e ../../data.db ]
-#if [ -e ../../../luna-ns3-sim.db ]
-#then
-#  echo "Kill data.db? (y/n)"
-#  read ANS
-#  if [ "$ANS" = "yes" -o "$ANS" = "y" ]
-#  then
-#    echo Deleting database
-    #rm ../../data.db
-#    rm ../../../luna-ns3-sim.db
-#  fi
-#fi
+
+
+
 
 for trial in $TRIALS
 do
   for nsats in $nSAT
   do
     echo Trial $trial, number of satellites $nsats
-    #../../waf --run "wifi-luna --format=db --distance=$nsats --run=run-$distance-$trial"
     ../waf --run "luna --nSat=$nsats --format=db --run=run-$nsats-$trial"
   done
 done
 
 
-#mv ../../data.db .
-#mv ../../../luna-ns3-sim.db .
 
-#CMD="select exp.input,avg(100-((rx.value*100)/tx.value)) \
-#    from Singletons rx, Singletons tx, Experiments exp \
-#    where rx.run = tx.run AND \
-#          rx.run = exp.run AND \
-#          rx.variable='receiver-rx-packets' AND \
-#          tx.variable='sender-tx-packets' \
-#    group by exp.input \
-#    order by abs(exp.input) ASC;"
-
-#sqlite3 -noheader luna-ns3-sim.db "$CMD" > luna-ns3-sim.data
-#sed -i.bak "s/|/   /" luna-ns3-sim.data
-#rm luna-ns3-sim.bak
-#gnuplot luna-ns3-sim.gnuplot
+gnuplot luna-throughput.gnuplot
 
 echo "Done; data in wifi-default.data, plot in wifi-default.eps"

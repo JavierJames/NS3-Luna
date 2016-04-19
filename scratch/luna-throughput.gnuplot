@@ -5,9 +5,9 @@ set size 1.0, 0.66
 #-------------------------------------------------------
 set out "luna-throughput.eps"
 #set title "Packet Loss Over Distance"
-set xlabel "Distance (m)"
-set xrange [0:200]
-set ylabel "% Packet Loss --- average of 5 trials per distance"
-set yrange [0:110]
+set xlabel "Avg throughput (m)"
+set xrange [1:16]
+set ylabel "% Avg throughput --- average of 5 trials per distance"
+set yrange [0:5000]
 
-plot "luna-ns3-sim.txt"  with lines title "WiFi Defaults"
+plot "perfThroughputAvg.txt"  with lines title "Avg Throughput"
