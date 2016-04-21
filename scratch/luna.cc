@@ -13,7 +13,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-
+//
 #include "ns3/core-module.h"
 //#include "ns3/point-to-point-module.h"
 #include "ns3/network-module.h"
@@ -23,6 +23,8 @@
 //#include "ns3/csma-module.h"
 #include "ns3/internet-module.h"
 #include "ns3/flow-monitor-module.h"
+#include "ns3/propagation-delay-model.h"
+#include "ns3/propagation-loss-model.h"
 
 #include <sqlite3.h> 
 
@@ -86,26 +88,14 @@ NS_LOG_COMPONENT_DEFINE ("Luna NS-3 Project: Wifi Infrastructur (AP + Nodes)");
 uint32_t maxNodes = 50; //maximum number of nodes, excluding AP
 
 
-void TxCallback (Ptr<CounterCalculator<uint32_t> > datac,
-                 std::string path, Ptr<const Packet> packet) {
-  NS_LOG_INFO ("Sent frame counted in " <<
-               datac->GetKey ());
-  datac->Update ();
-  // end TxCallback
-}
-
-
-
 void writeVectorToFile(string filename, vector <string> strVector)
 {
   ofstream file; 
   file.open(filename.c_str());
 
-  cout<<"testing file results"<<endl; 
-  cout<<filename<<endl; 
   for(uint32_t i = 0; i < strVector.size(); i++){
       file << strVector[i] << endl;
-      cout<< strVector[i] << endl;
+      //cout<< strVector[i] << endl;
    }
   file.close(); 
 
@@ -143,7 +133,7 @@ int findParameterIndex(vector<string> data, string parameter)
   size=data.size();
   int index=-1;
 
-cout<<"string received: "<<parameter<<endl;
+//cout<<"string received: "<<parameter<<endl;
 
  for(uint32_t i=0; i< size; i++)
  {
@@ -151,12 +141,12 @@ cout<<"string received: "<<parameter<<endl;
         string word;
 
        ss>>word;
-      cout<<"word: "<<" "<<word<<endl;
-     cout<<"parameter: " <<parameter<<endl;
+     // cout<<"word: "<<" "<<word<<endl;
+     //cout<<"parameter: " <<parameter<<endl;
 
     if( parameter.compare(word) == 0)
     {
-     cout<<"paramter found in data"<<endl;
+    // cout<<"paramter found in data"<<endl;
       index= i;
       break;
     }
@@ -170,14 +160,14 @@ vector<string>  addNewResults(vector<string> vector, string parameter, string re
 
   int index;
   index =  findParameterIndex(vector,parameter);
-  cout<<"index of paramter: "<<index<<endl;
+  //cout<<"index of paramter: "<<index<<endl;
   string line;
 
 
   //parameter recorded before? 
   if(vector.size()==0 || index == -1)
   {
-     cout<<"first time storing parameter"<<endl;
+     //cout<<"first time storing parameter"<<endl;
      line = parameter;
      line.append("  ");
      line.append(result);
@@ -186,7 +176,7 @@ vector<string>  addNewResults(vector<string> vector, string parameter, string re
 
  }
  else{
-     cout<<"appending new results to parameter"<<endl;
+    // cout<<"appending new results to parameter"<<endl;
    vector[index].append("  ");
    vector[index].append(result);
 
@@ -263,20 +253,20 @@ vector<string> calculateAvg(vector<string> data)
                         parameterString=word;
                 }
                 else{
-                        cout << " " << wordNum << "." << word<<endl;
+                       // cout << " " << wordNum << "." << word<<endl;
                         array[wordNum-1]=stof(word);
                }
         }
 
-        cout<<"float results:"<<endl;
+       // cout<<"float results:"<<endl;
         numbers = wordNum-1;
         for(int i=0; i<numbers; i++)
         {
                 sum += array[i];
-                cout<<"array["<<i<<"]: "<<array[i]<<endl;
+               // cout<<"array["<<i<<"]: "<<array[i]<<endl;
         }
        avg= sum/numbers;
-       cout<<"avg ="<<avg<<" = "<<sum<<" /"<<numbers<<endl;
+       //cout<<"avg ="<<avg<<" = "<<sum<<" /"<<numbers<<endl;
 
       results =  addNewResults(results, parameterString, convertFloatToString(avg));
 
@@ -301,14 +291,24 @@ vector<string> calculateAvg(vector<string> data)
 int main (int argc, char *argv[])
 {
 
+  double interval = 1.0; 			// seconds
   uint32_t nMobile = 0; 			//number of mobile phones  
   uint32_t nSub = 0;  				//number of subwoofers 
-  uint32_t nSat = 2 ;  				//number of satellites   
+  uint32_t nSat = 1 ;  				//number of satellites   
   uint32_t nAP = 1; 				//number of AP
-  uint32_t nWifi = nSub + nSat + nMobile;   	//total number of wireless nodes, excluding AP
-  uint32_t packetSize = 2048; 			// bytes
-  uint32_t numPackets = 1; 			//320
-  double interval = 1.0; 			// seconds
+
+  /* Parameters to change */
+  uint32_t nWifi = nSub + nSat + nMobile;   	//total number of wireless nodes, excluding AP //segmentation fault accurs after 17 nodes
+  uint32_t packetSize = 2048*2; 	 	// bytes
+  uint32_t numPackets = 10; 			//320
+  double distance = 3;
+  string dataRate = "DsssRate11Mbps";
+
+  /* Qos parameters to observe */
+  float avgThroughput;
+  float avgJitter;
+  float avgDelay;
+  float packetlossRatio;
 
   bool verbose = true;
   bool tracing = true;
@@ -316,7 +316,6 @@ int main (int argc, char *argv[])
 
   string experiment ("luna-ns3-sim-test");
   string strategy ("luna-ns3-sim");
-  string input;
   string runID;
   string format ("omnet");
 
@@ -324,22 +323,19 @@ int main (int argc, char *argv[])
   fstream file; 
   ifstream infile; 
   ofstream outfile; 
-  fstream file2; 
-  ifstream infile2; 
   string output_perfThroughput = "./scratch/perfThroughput.txt";
   string output_perfThroughputAvg = "./scratch/perfThroughputAvg.txt";
-  string output_perfThroughput2 = "./scratch/perfThroughput2.txt";
+  string output_perfDelay = "./scratch/perfDelay.txt";
+  string output_file;
+
   vector<string> strVector; 
   string line;
   uint32_t number_of_lines=0;
   vector < pair<int, string> > vectorPair;
   pair<int,string> intStringData; 
-vector<string> tempVec = strVector;
+  vector<string> tempVec = strVector;
   
   Time::SetResolution (Time::NS);
-
-
-
 
 
 
@@ -356,6 +352,9 @@ vector<string> tempVec = strVector;
   cmd.AddValue ("nSat", "Number of wifi STA devices, Satellites", nSat);
   cmd.AddValue ("packetSize", "Payload size", packetSize);
   cmd.AddValue ("numPackets", "Number of packets", numPackets);
+  cmd.AddValue("distance", "Distance apart to place nodes (in meters).", distance); 
+  cmd.AddValue("dataRate", "Link Bandwidth (in Mbps).", dataRate); 
+
   cmd.AddValue ("verbose", "Tell echo applications to log if true", verbose);
   cmd.AddValue ("tracing", "Enable pcap tracing", tracing);
   cmd.AddValue ("format", "Format to use for data output.", format);  
@@ -377,12 +376,6 @@ vector<string> tempVec = strVector;
     }
   #endif
 
- {
-    stringstream sstr ("");
-    sstr << nSat;
-    input = sstr.str ();
-  }
-
 
   if (verbose)
     {
@@ -390,21 +383,22 @@ vector<string> tempVec = strVector;
       LogComponentEnable ("UdpEchoServerApplication", LOG_LEVEL_INFO);
     }
 
+  #ifdef test   
   cout<<".........................................."<<endl;
   cout<<"nSat:"<<nSat <<endl; 
   cout<<"runID:"<<runID <<endl; 
-  
+
+
   char trialID_char  =runID.at(runID.size()-1);
-  cout<< "trialID char:"<<trialID_char<<"  size:"<<sizeof(trialID_char) <<endl;  
+  //cout<< "trialID char:"<<trialID_char<<"  size:"<<sizeof(trialID_char) <<endl;  
   char array [2]= {}; 
   array [0] = (char)trialID_char; 
   int trialID = atoi(array); 
   int col = trialID; 
   int row= nSat;
-  cout<<"col:"<<col<<" "<<"row:"<<row<<endl;
+  //cout<<"col:"<<col<<" "<<"row:"<<row<<endl;
+  #endif
 
-
-  float   avgThroughput;
 
 
 
@@ -413,9 +407,9 @@ vector<string> tempVec = strVector;
 *capture data from files & read number of lines
 *********************************************/
 strVector= fetchDataFromFile(output_perfThroughput.c_str(),&number_of_lines);
-cout<<"Data read from file "<<endl;
-printVector(strVector);
-cout<<"number of lines: "<<number_of_lines<<endl;
+//cout<<"Data read from file "<<endl;
+//printVector(strVector);
+//cout<<"number of lines: "<<number_of_lines<<endl;
 
 
 
@@ -441,8 +435,16 @@ cout<<"number of lines: "<<number_of_lines<<endl;
 
   NodeContainer wifiApNode; 
   wifiApNode.Create (nAP);
-  cout<<"Nodes and AP created \n"<<endl;
 
+  NodeContainer nodes; 
+  nodes.Add(wifiStaNodes.Get(0)); 
+  nodes.Add(wifiApNode.Get(0)); 
+
+  NodeContainer nodesAh; 
+  nodesAh.Create(2);
+
+
+  cout<<"Nodes and AP created \n"<<endl;
 
   /******************************************************
   * Topology: Channel & NetDevice
@@ -450,10 +452,14 @@ cout<<"number of lines: "<<number_of_lines<<endl;
   cout<<"Creating Topology and creating network devices in nodes  ..."<<endl;
   YansWifiChannelHelper wifiChannel = YansWifiChannelHelper::Default ();
   //wifiChannel.SetPropagationDelay ("ns3::ConstantSpeedPropagationDelayModel");
-  //wifiChannel.AddPropagationLoss ("ns3::FixedRssLossModel","Rss",DoubleValue (rss));
+  wifiChannel.AddPropagationLoss ("ns3::FixedRssLossModel","Rss",DoubleValue (2));
  
   //wifiChannel.AddPropagationLoss ("ns3::LogDistancePropagationLossModel",
   //                                "Exponent", DoubleValue (3.0));
+
+  //wifiChannel.SetPropagationDelay ("ns3::PropagationDelayModel");
+  wifiChannel.SetPropagationDelay ("ns3::RandomPropagationDelayModel");
+  //wifiChannel.AddPropagationLoss ("ns3::PropogationDelayModel");
 
 
   YansWifiPhyHelper wifiPhy = YansWifiPhyHelper::Default ();
@@ -465,7 +471,15 @@ cout<<"number of lines: "<<number_of_lines<<endl;
 
   //Configure Nodes MAC layer
   cout<<"Configuring MAC layer ..."<<endl;
-  string phyMode ("DsssRate11Mbps");
+  string phyMode; 
+  phyMode= dataRate;
+  //phyMode= "DsssRate1Mbps";
+  //string phyMode ("DsssRate1Mbps");
+  //string phyMode ("DsssRate12Mbps");
+  //string phyMode ("DsssRate5.5Mbps");
+  //string phyMode ("DsssRate11Mbps");
+
+
   WifiHelper wifi = WifiHelper::Default ();
   wifi.SetStandard (WIFI_PHY_STANDARD_80211b);
   //wifi.SetRemoteStationManager ("ns3::AarfWifiManager");  //set rate control algorithm
@@ -500,6 +514,10 @@ cout<<"number of lines: "<<number_of_lines<<endl;
   apDevices = wifi.Install (wifiPhy, wifiMac, wifiApNode);
 
 
+  wifiMac.SetType ("ns3::AdhocWifiMac");
+ NetDeviceContainer nodeDevices = wifi.Install(wifiPhy, wifiMac, nodesAh); 
+
+
   /******************************************************
   * Internet Stack & Ipv4Address
   *******************************************************/
@@ -508,19 +526,21 @@ cout<<"number of lines: "<<number_of_lines<<endl;
   InternetStackHelper stack;
   stack.Install (wifiStaNodes);
   stack.Install (wifiApNode);
+  stack.Install (nodesAh);
 
   //Configure IPv4 
   cout<<"Configuring IPv4 address for nodes ..."<<endl;
   Ipv4AddressHelper ipv4;
   Ipv4Address addr;
 
-  //ipv4.SetBase ("10.1.1.0", "255.255.255.0");
   ipv4.SetBase ("192.168.1.0", "255.255.255.0");
   Ipv4InterfaceContainer sta_interface; 
   Ipv4InterfaceContainer ap_interface;
   ap_interface = ipv4.Assign (apDevices);
   sta_interface = ipv4.Assign (staDevices);
 
+  Ipv4InterfaceContainer nodes_interface;
+  nodes_interface = ipv4.Assign (nodeDevices);
 
  //debug ip addresses 
  for(uint32_t i = 0 ; i < nWifi; i++)
@@ -535,10 +555,18 @@ cout<<"number of lines: "<<number_of_lines<<endl;
  cout<<"IPv4 address setup completed \n"<<endl;
   
 
+ for(uint32_t i = 0 ; i < 2; i++)
+ {
+	addr = nodes_interface.GetAddress(i);
+	std::cout << " Node " << i+1 << "\t "<< "IP Address "<<addr << std::endl;
+ }
+
+
   /******************************************************
   * Node Mobibility
   *******************************************************/
-  MobilityHelper mobility;
+/* 
+MobilityHelper mobility;
   mobility.SetPositionAllocator ("ns3::GridPositionAllocator",
                                  "MinX", DoubleValue (0.0),
                                  "MinY", DoubleValue (0.0),
@@ -551,10 +579,29 @@ cout<<"number of lines: "<<number_of_lines<<endl;
   mobility.Install (wifiApNode); //set constant position mobility model on AP 
   //mobility.Install (wifiStaNodes); //set mobility  constant position  model on subwoofer and satellites
 
+ // mobility.SetMobilityModel ("ns3::RandomWalk2dMobilityModel",
+  //                           "Bounds", RectangleValue (Rectangle (-50, 50, -50, 50)));
   mobility.SetMobilityModel ("ns3::RandomWalk2dMobilityModel",
-                             "Bounds", RectangleValue (Rectangle (-50, 50, -50, 50)));
+                             "Bounds", RectangleValue (Rectangle (-100, 100, -100, 100)));
   //mobility.Install (wifiStaNodes.Get(0)); //set mobility model on mobile phone
    mobility.Install (wifiStaNodes); //set mobility  constant position  model on subwoofer and satellites
+*/
+
+  NS_LOG_INFO("Installing static mobility; distance " << distance << " .");
+  MobilityHelper mobility;
+  Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator>();
+  positionAlloc->Add(Vector(0.0, 0.0, 0.0));
+  positionAlloc->Add(Vector(0.0, distance, 0.0));
+  //positionAlloc->Add(Vector( distance,0.0, 0.0));
+  mobility.SetPositionAllocator(positionAlloc);
+  //NodeContainer nodes( wifiStaNodes, wifiApNode); 
+//  NodeContainer nodes; 
+ // nodes.Add(wifiStaNodes.Get(0)); 
+ // nodes.Add(wifiApNode.Get(0)); 
+  //mobility.Install (nodes); //set constant position mobility model on AP 
+   mobility.InstallAll();
+
+   mobility.Install(nodesAh);
 
 
 
@@ -563,26 +610,23 @@ cout<<"number of lines: "<<number_of_lines<<endl;
   *******************************************************/
   uint16_t port = 4000;
   UdpEchoServerHelper echoServer (port);
-  ApplicationContainer serverApps = echoServer.Install (wifiStaNodes.Get (0)); //set server on sat //1
+  //ApplicationContainer serverApps = echoServer.Install (wifiStaNodes.Get (0)); //set server on sat //1
+  ApplicationContainer serverApps = echoServer.Install (nodesAh.Get (0)); //set server on sat //1
   serverApps.Start (Seconds (1.0));
   serverApps.Stop (Seconds (10.0));
 
-  UdpEchoClientHelper echoClient (sta_interface.GetAddress (0), port); //1 
+  //UdpEchoClientHelper echoClient (sta_interface.GetAddress (0), port); //1 
+  UdpEchoClientHelper echoClient (nodes_interface.GetAddress (0), port); //1 
   echoClient.SetAttribute ("MaxPackets", UintegerValue(numPackets));
   echoClient.SetAttribute ("Interval", TimeValue (Seconds(interval)));
   echoClient.SetAttribute ("PacketSize", UintegerValue(packetSize));
-  //echoClient.SetAttribute ("Interval", TimeValue (Time("0.002")));
 
-  ApplicationContainer clientApps =  echoClient.Install (wifiApNode.Get (0)); //set client on mobile phone 
+  //ApplicationContainer clientApps =  echoClient.Install (wifiApNode.Get (0)); //set client on mobile phone 
+  ApplicationContainer clientApps =  echoClient.Install (nodesAh.Get (1)); //set client on mobile phone 
   clientApps.Start (Seconds (2.0));
   clientApps.Stop (Seconds (10.0));
 
   Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
-
- 
-
-// Simulator::Stop (Seconds (10.0));
-  
 
 
   /******************************************************
@@ -599,21 +643,6 @@ cout<<"number of lines: "<<number_of_lines<<endl;
       wifiPhy.EnablePcapAll ("wifiPhyPcapAll");
     }
 
-
-
-  //------------------------------------------------------------
-  //-- Setup stats and data collection
-  //--------------------------------------------
-  // Create a DataCollector object to hold information about this run.
-  DataCollector luna_ns3_sim_data;
-  luna_ns3_sim_data.DescribeRun (experiment,
-                    strategy,
-                    input,
-                    runID);
-
-
-  // Add any information we wish to record about this run.
-  luna_ns3_sim_data.AddMetadata ("author", "javier");
 
 
 
@@ -637,19 +666,30 @@ cout<<"number of lines: "<<number_of_lines<<endl;
           cout << "Flow " << i->first  << " (" << t.sourceAddress << " -> " << t.destinationAddress << ")\n";
           cout << "  Tx Bytes:   " << i->second.txBytes << "\n";
           cout << "  Rx Bytes:   " << i->second.rxBytes << "\n";
-          avgThroughput=i->second.rxBytes * 8.0 / (i->second.timeLastRxPacket.GetSeconds() - i->second.timeFirstTxPacket.GetSeconds())/1024/nWifi ;
-      	  cout << " Average Throughput: " << avgThroughput << " kbps\n";
+
+           avgThroughput=i->second.rxBytes * 8.0 / (i->second.timeLastRxPacket.GetSeconds() - i->second.timeFirstTxPacket.GetSeconds())/1024/nWifi ;
+      	  avgDelay =(i->second.delaySum.GetMilliSeconds())/(i->second.rxPackets) ; 
+          if(numPackets ==1) avgJitter=0; 
+          else avgJitter = (i->second.jitterSum.GetMilliSeconds())/(i->second.rxPackets-1); 
+          packetlossRatio = (i->second.lostPackets)/ ( i->second.lostPackets + i->second.rxPackets);
+
+
+      	  cout << " Average Throughput: " << avgThroughput << " kbps"<<endl;
+      	  cout << " Average Delay: " << avgDelay  << " ms"<<endl;
+          cout << " Average Jitter: " << avgJitter << " ms"<<endl;
+          cout << " Packet Loss Ratio: " << packetlossRatio <<endl;
+
+
      }
 
   monitor->SerializeToXmlFile("luna.flowmon", true, true);
-
-
+#ifdef test 
 /*store new data in data vector */
 tempVec = strVector;
 strVector=  addNewResults(tempVec, convertUintToString(nSat),convertFloatToString(avgThroughput));
 
-cout<<"Data to store in file...."<<endl; 
-printVector(strVector);
+//cout<<"Data to store in file...."<<endl; 
+//printVector(strVector);
 
 /*store run results to file */
 writeVectorToFile(output_perfThroughput.c_str(),strVector);
@@ -657,23 +697,19 @@ writeVectorToFile(output_perfThroughput.c_str(),strVector);
 
 vector<string> strVectorAvg;
  strVectorAvg= calculateAvg(strVector);
-cout<<"printing AVG "<<endl;
-printVector(strVectorAvg);
+//cout<<"printing AVG "<<endl;
+//printVector(strVectorAvg);
 
 writeVectorToFile(output_perfThroughputAvg.c_str(),strVectorAvg);
-
-
-
-
+#endif 
 
   Simulator::Destroy ();
 
-
-
-
-
-
-
+cout<<"run parameters value"<<endl;
+cout<<"nWifi : "<<nWifi<<endl;
+cout<<"packetSize : "<<packetSize<<endl;
+cout<<"numPackets : "<<numPackets<<endl;
+cout<<"dataRate : "<<phyMode<<endl;
   
   cout<<"program done "<<endl;
   return 0;
