@@ -299,9 +299,9 @@ int main (int argc, char *argv[])
 
   /* Parameters to change */
   uint32_t nWifi = nSub + nSat + nMobile;   	//total number of wireless nodes, excluding AP //segmentation fault accurs after 17 nodes
-  uint32_t packetSize = 2048*2; 	 	// bytes
-  uint32_t numPackets = 10; 			//320
-  double distance = 3;
+  uint32_t packetSize = 80; 	 	// bytes
+  uint32_t numPackets = 320; 			//320
+  double distance = 10;
   string dataRate = "DsssRate11Mbps";
 
   /* Qos parameters to observe */
@@ -318,6 +318,12 @@ int main (int argc, char *argv[])
   string strategy ("luna-ns3-sim");
   string runID;
   string format ("omnet");
+
+// Create randomness based on time
+time_t timex;
+time(&timex);
+RngSeedManager::SetSeed(timex);
+RngSeedManager::SetRun(1);
 
 
   fstream file; 
