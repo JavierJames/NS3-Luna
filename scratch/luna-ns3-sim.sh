@@ -7,11 +7,10 @@ DATABASE_NAME="luna-ns3"
 #TRIALS="1 2 3 4 5"
 #nSAT="1 2 5 10 15 20 25 30 35 40 45 50"
 
-#TRIALS="1 2"
-#nSAT="1 2"
 
 TRIALS="1 2 3"
 nSAT="1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16"
+#nSAT="1 2"
 
 echo Luna NS3 Simulation
 
@@ -65,20 +64,23 @@ fi
 
 
 
-#PACKETSIZE="1"
+PACKETSIZE="20"
 #DATARATE="DsssRate5_5Mbps"
-PACKETSIZE="20 24 38 50 60 80 160"
-DATARATE="DsssRate1Mbps DsssRate2Mbps DsssRate5_5Mbps DsssRate11Mbps"
+#PACKETSIZE="20 24 38 50 60 80 160"
+#DATARATE="DsssRate1Mbps DsssRate2Mbps DsssRate5_5Mbps DsssRate11Mbps"
+DATARATE="DsssRate5_5Mbps"
 
-for datarate in $DATARATE
+for trial in $TRIALS
 do
-  for packetsize in $PACKETSIZE
+  for datarate in $DATARATE
   do
-    echo Trial $trial, number of satellites $nsats
-    ../waf --run "luna --packetSize=$packetsize  --dataRate=$datarate --format=db --run=run-$datarate-$packetsize-$trial"
+    for packetsize in $PACKETSIZE
+    do
+      echo Trial $trial, number of satellites $nsats
+      ../waf --run "luna --packetSize=$packetsize  --dataRate=$datarate --format=db --run=run-$datarate-$packetsize-$trial"
+    done
   done
-done
-
+done  
 
 
 
