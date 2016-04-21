@@ -36,34 +36,50 @@ then
   exit 255
 fi
 
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:bin/
-#echo $PWD
-#if [ ! -f "perfThroughputAvg.txt"]
-#if [ -e "myfirst.cc" ]
-if [ -e "perfThroughputAvg.txt" ]
-then
-  echo "Kill perfThroughputAvg.txt? (y/n)"
-  read ANS
-  if [ "$ANS" = "yes" -o "$ANS" = "y" ]
-  then
-    echo Deleting database
-    rm ./perfThroughput.txt
-    rm ./perfThroughputAvg.txt
-  fi
-fi
+#export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:bin/
+#if [ -e "perfThroughputAvg.txt" ]
+#then
+#  echo "Kill perfThroughputAvg.txt? (y/n)"
+#  read ANS
+#  if [ "$ANS" = "yes" -o "$ANS" = "y" ]
+#  then
+#    echo Deleting database
+#    rm ./perfThroughput.txt
+#    rm ./perfThroughputAvg.txt
+#  fi
+#fi
 
 
 
 
 
-for trial in $TRIALS
+#for trial in $TRIALS
+#do
+#  for nsats in $nSAT
+#  do
+#    echo Trial $trial, number of satellites $nsats
+#    ../waf --run "luna --nSat=$nsats --format=db --run=run-$nsats-$trial"
+#  done
+#done
+
+
+
+
+#PACKETSIZE="1"
+#DATARATE="DsssRate5_5Mbps"
+PACKETSIZE="20 24 38 50 60 80 160"
+DATARATE="DsssRate1Mbps DsssRate2Mbps DsssRate5_5Mbps DsssRate11Mbps"
+
+for datarate in $DATARATE
 do
-  for nsats in $nSAT
+  for packetsize in $PACKETSIZE
   do
     echo Trial $trial, number of satellites $nsats
-    ../waf --run "luna --nSat=$nsats --format=db --run=run-$nsats-$trial"
+    ../waf --run "luna --packetSize=$packetsize  --dataRate=$datarate --format=db --run=run-$datarate-$packetsize-$trial"
   done
 done
+
+
 
 
 

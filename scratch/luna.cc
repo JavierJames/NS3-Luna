@@ -299,9 +299,12 @@ int main (int argc, char *argv[])
 
   /* Parameters to change */
   uint32_t nWifi = nSub + nSat + nMobile;   	//total number of wireless nodes, excluding AP //segmentation fault accurs after 17 nodes
-  uint32_t packetSize = 80; 	 	// bytes
+  uint32_t packetSize = 160; 	 	// bytes
   uint32_t numPackets = 320; 			//320
   double distance = 10;
+  //string dataRate = "DsssRate1Mbps";
+  //string dataRate = "DsssRate2Mbps";
+  //string dataRate = "DsssRate5_5Mbps";
   string dataRate = "DsssRate11Mbps";
 
   /* Qos parameters to observe */
@@ -480,10 +483,6 @@ strVector= fetchDataFromFile(output_perfThroughput.c_str(),&number_of_lines);
   string phyMode; 
   phyMode= dataRate;
   //phyMode= "DsssRate1Mbps";
-  //string phyMode ("DsssRate1Mbps");
-  //string phyMode ("DsssRate12Mbps");
-  //string phyMode ("DsssRate5.5Mbps");
-  //string phyMode ("DsssRate11Mbps");
 
 
   WifiHelper wifi = WifiHelper::Default ();
@@ -698,7 +697,7 @@ strVector=  addNewResults(tempVec, convertUintToString(nSat),convertFloatToStrin
 //printVector(strVector);
 
 /*store run results to file */
-writeVectorToFile(output_perfThroughput.c_str(),strVector);
+/writeVectorToFile(output_perfThroughput.c_str(),strVector);
 
 
 vector<string> strVectorAvg;
