@@ -35,7 +35,7 @@ then
   exit 255
 fi
 
-#export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:bin/
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:bin/
 #if [ -e "perfThroughputAvg.txt" ]
 #then
 #  echo "Kill perfThroughputAvg.txt? (y/n)"
@@ -63,19 +63,36 @@ fi
 
 
 
+if [ -e "DsssRate1Mbps.txt" ] ||[ -e "DsssRate2Mbps.txt" ] || [ -e "DsssRate5_5Mbps.txt" ] || [ -e "DsssRate11Mbps.txt" ]
+then
+  echo "Kill previous run dataset? (y/n)"
+  read ANS
+  if [ "$ANS" = "yes" -o "$ANS" = "y" ]
+  then
+    echo Deleting database
+    rm ./DsssRate1Mbps.txt
+    rm ./DsssRate1Mbps-Stats.txt
+    rm ./DsssRate2Mbps.txt
+    rm ./DsssRate2Mbps-Stats.txt
+    rm ./DsssRate5_5Mbps.txt
+    rm ./DsssRate5_5Mbps-Stats.txt
+    rm ./DsssRate11Mbps.txt
+    rm ./DsssRate11Mbps-Stats.txt
+  fi
+fi
 
 #PACKETSIZE="20"
 #DATARATE="DsssRate5_5Mbps"
-#TRIALS="1 2 3 4 5"
-#PACKETSIZE="20 24 38 50 60 80 160"
-#DATARATE="DsssRate1Mbps DsssRate2Mbps DsssRate5_5Mbps DsssRate11Mbps"
+TRIALS="1 2 3 4 5"
+PACKETSIZE="20 24 38 50 60 80 160"
+DATARATE="DsssRate1Mbps DsssRate2Mbps DsssRate5_5Mbps DsssRate11Mbps"
 #TRIALS="1"
 #PACKETSIZE="20 24"
-DATARATE="DsssRate5_5Mbps  DsssRate11Mbps"
+#DATARATE="DsssRate5_5Mbps  DsssRate11Mbps"
 
 
-TRIALS="1 2 3"
-PACKETSIZE="20 24 38"
+#TRIALS="1 2 3"
+#PACKETSIZE="20 24 38"
 #DATARATE="DsssRate5_5Mbps"
 
 for trial in $TRIALS
@@ -96,4 +113,4 @@ done
 #gnuplot luna-throughput.gnuplot
 gnuplot luna-delay.gnuplot
 
-echo "Done; data in wifi-default.data, plot in wifi-default.eps"
+echo "Done; dataset in DsssRatexxMbps.txt [parameter,trial1, trail2, ..] , statistic in DsssRatexxMbps-Stats.txt [parameter,mean,standard deviation], plot in luna-perfDelay.png"

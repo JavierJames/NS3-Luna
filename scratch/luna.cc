@@ -438,9 +438,9 @@ RngSeedManager::SetRun(1);
   //filenameStats.append(runID); 
   filenameStats.append(dataRate); 
   filenameStats.append("-Stats.txt"); 
-  cout<<"run ID: "<<fileID<<endl;
-  cout<<"Filename : "<<filenameResults<<endl;
-  cout<<"Filename Stats : "<<filenameStats<<endl;
+  //cout<<"run ID: "<<fileID<<endl;
+  //cout<<"Filename : "<<filenameResults<<endl;
+  //cout<<"Filename Stats : "<<filenameStats<<endl;
 
 
   if (format != "omnet" && format != "db") {
@@ -715,13 +715,13 @@ MobilityHelper mobility;
   Ptr<Ipv4FlowClassifier> classifier = DynamicCast<Ipv4FlowClassifier> (flowmon.GetClassifier ());
   std::map<FlowId, FlowMonitor::FlowStats> stats = monitor->GetFlowStats ();
 
-  cout<<endl<<endl<<"**Performance analys**"<<endl;
+  //cout<<endl<<endl<<"**Performance analys**"<<endl;
   for (std::map<FlowId, FlowMonitor::FlowStats>::const_iterator i = stats.begin (); i != stats.end (); ++i)
     {
 	  Ipv4FlowClassifier::FiveTuple t = classifier->FindFlow (i->first);
-          cout << "Flow " << i->first  << " (" << t.sourceAddress << " -> " << t.destinationAddress << ")\n";
-          cout << "  Tx Bytes:   " << i->second.txBytes << "\n";
-          cout << "  Rx Bytes:   " << i->second.rxBytes << "\n";
+          //cout << "Flow " << i->first  << " (" << t.sourceAddress << " -> " << t.destinationAddress << ")\n";
+          //cout << "  Tx Bytes:   " << i->second.txBytes << "\n";
+          //cout << "  Rx Bytes:   " << i->second.rxBytes << "\n";
 
            avgThroughput=i->second.rxBytes * 8.0 / (i->second.timeLastRxPacket.GetSeconds() - i->second.timeFirstTxPacket.GetSeconds())/1024/nWifi ;
       	  avgDelay =(i->second.delaySum.GetMilliSeconds())/(i->second.rxPackets) ; 
@@ -729,12 +729,12 @@ MobilityHelper mobility;
           else avgJitter = (i->second.jitterSum.GetMilliSeconds())/(i->second.rxPackets-1); 
           packetlossRatio = (i->second.lostPackets)/ ( i->second.lostPackets + i->second.rxPackets);
 
-
+         /*
       	  cout << " Average Throughput: " << avgThroughput << " kbps"<<endl;
       	  cout << " Average Delay: " << avgDelay  << " ms"<<endl;
           cout << " Average Jitter: " << avgJitter << " ms"<<endl;
           cout << " Packet Loss Ratio: " << packetlossRatio <<endl;
-
+         */
 
      }
 
@@ -745,8 +745,8 @@ tempVec = strVector;
 //strVector=  addNewResults(tempVec, convertUintToString(nSat),convertFloatToString(avgThroughput));
 strVector=  addNewResults(tempVec, convertUintToString(packetSize),convertFloatToString(avgDelay));
 
-cout<<"Data to store in file...."<<endl; 
-printVector(strVector);
+//cout<<"Data to store in file...."<<endl; 
+//printVector(strVector);
 
 
 /*store run results to file of DataSet*/
@@ -757,8 +757,8 @@ writeVectorToFile(filenameResults.c_str(),strVector);
 
 vector<string> strVectorStats;
  strVectorStats= calculateStats(strVector);
-cout<<"printing Stats"<<endl;
-printVector(strVectorStats);
+//cout<<"printing Stats"<<endl;
+//printVector(strVectorStats);
 
 //writeVectorToFile(output_perfThroughputStats.c_str(),strVectorStats);
 //writeVectorToFile(output_perfDelayStats.c_str(),strVectorStats);
@@ -766,11 +766,13 @@ writeVectorToFile(filenameStats.c_str(),strVectorStats);
 
 Simulator::Destroy ();
 
+/*
 cout<<"run parameters value"<<endl;
 cout<<"nWifi : "<<nWifi<<endl;
 cout<<"packetSize : "<<packetSize<<endl;
 cout<<"numPackets : "<<numPackets<<endl;
 cout<<"dataRate : "<<phyMode<<endl;
+*/
   
   cout<<"program done "<<endl;
   return 0;

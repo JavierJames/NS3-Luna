@@ -15,8 +15,10 @@ set yrange [0:]
 #plot "perfDelayStats.txt" with yerrorbar 
 #replot "perfDelayStats.txt" with yerrorbar #2nd file 
 
-plot "DsssRate5_5Mbps-Stats.txt" with yerrorbar 
-replot "DsssRate11Mbps-Stats.txt" with yerrorbar #2nd file 
+plot "DsssRate1Mbps-Stats.txt" with yerrorbar #1st file
+replot "DsssRate2Mbps-Stats.txt" with yerrorbar #2nd file 
+replot "DsssRate5_5Mbps-Stats.txt" with yerrorbar #3rd file 
+replot "DsssRate11Mbps-Stats.txt" with yerrorbar #4th file 
 
 
 set term png
