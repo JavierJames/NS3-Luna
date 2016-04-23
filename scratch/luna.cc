@@ -52,6 +52,10 @@
 #include <complex>
 //#include <tuple>
 
+#include <cmath>
+#include <ctgmath>
+
+
 // Default Network Topology
 //
 // Number of wifi or csma nodes can be increased up to 250
@@ -186,6 +190,42 @@ vector<string>  addNewResults(vector<string> vector, string parameter, string re
 }
 
 
+
+vector<string>  addNewResultsStats(vector<string> vector, string parameter, string avg, string stdv)
+{
+
+  int index;
+  index =  findParameterIndex(vector,parameter);
+  //cout<<"index of paramter: "<<index<<endl;
+  string line;
+
+
+  //parameter recorded before? 
+  if(vector.size()==0 || index == -1)
+  {
+     //cout<<"first time storing parameter"<<endl;
+     line = parameter;
+     line.append("  ");
+     line.append(avg);
+     line.append("  ");
+     line.append(stdv);
+
+     vector.push_back(line);
+
+ }
+ else{
+    // cout<<"appending new results to parameter"<<endl;
+   vector[index].append("  ");
+   vector[index].append(avg);
+   vector[index].append("  ");
+   vector[index].append(stdv);
+
+ }
+  return vector;
+
+}
+
+
 vector<string> fetchDataFromFile (string filename, uint32_t *lineNumbers)
 {
 
@@ -219,7 +259,7 @@ vector<string> fetchDataFromFile (string filename, uint32_t *lineNumbers)
 
 }
 
-vector<string> calculateAvg(vector<string> data)
+vector<string> calculateStats(vector<string> data)
 {
 
   unsigned int size;
@@ -241,6 +281,7 @@ vector<string> calculateAvg(vector<string> data)
         float sum=0;
         float numbers;
         float avg;
+        float standard_dev=0;
 
         length = data[i].length();
 
@@ -268,7 +309,17 @@ vector<string> calculateAvg(vector<string> data)
        avg= sum/numbers;
        //cout<<"avg ="<<avg<<" = "<<sum<<" /"<<numbers<<endl;
 
-      results =  addNewResults(results, parameterString, convertFloatToString(avg));
+        for(int i=0; i<numbers; i++)
+        {
+                standard_dev += pow(array[i]-avg,2);
+               // cout<<"array["<<i<<"]: "<<array[i]<<endl;
+        }
+       float temp=standard_dev;
+       standard_dev = sqrt(temp/numbers);
+       //cout<<"standard_dev ="<<standard_dev<<endl;
+
+      //results =  addNewResults(results, parameterString, convertFloatToString(avg));
+      results =  addNewResultsStats(results, parameterString, convertFloatToString(avg), convertFloatToString(standard_dev));
 
 
   }
@@ -332,9 +383,12 @@ RngSeedManager::SetRun(1);
   fstream file; 
   ifstream infile; 
   ofstream outfile; 
-  string output_perfThroughput = "./scratch/perfThroughput.txt";
-  string output_perfThroughputAvg = "./scratch/perfThroughputAvg.txt";
+  string output_perfThroughput = "./scratch/test.txt";
+  string output_perfThroughputAvg = "./scratch/testAvg.txt";
+  //string output_perfThroughput = "./scratch/perfThroughput.txt";
+  //string output_perfThroughputAvg = "./scratch/perfThroughputAvg.txt";
   string output_perfDelay = "./scratch/perfDelay.txt";
+  //string output_perfDelayAvg = "./scratch/perfDelayAvg.txt";
   string output_file;
 
   vector<string> strVector; 
@@ -392,35 +446,14 @@ RngSeedManager::SetRun(1);
       LogComponentEnable ("UdpEchoServerApplication", LOG_LEVEL_INFO);
     }
 
-  #ifdef test   
-  cout<<".........................................."<<endl;
-  cout<<"nSat:"<<nSat <<endl; 
-  cout<<"runID:"<<runID <<endl; 
-
-
-  char trialID_char  =runID.at(runID.size()-1);
-  //cout<< "trialID char:"<<trialID_char<<"  size:"<<sizeof(trialID_char) <<endl;  
-  char array [2]= {}; 
-  array [0] = (char)trialID_char; 
-  int trialID = atoi(array); 
-  int col = trialID; 
-  int row= nSat;
-  //cout<<"col:"<<col<<" "<<"row:"<<row<<endl;
-  #endif
-
-
-
-
 
 /********************************************
 *capture data from files & read number of lines
 *********************************************/
 strVector= fetchDataFromFile(output_perfThroughput.c_str(),&number_of_lines);
-//cout<<"Data read from file "<<endl;
-//printVector(strVector);
-//cout<<"number of lines: "<<number_of_lines<<endl;
-
-
+cout<<"Data read from file "<<endl;
+printVector(strVector);
+cout<<"number of lines: "<<number_of_lines<<endl;
 
 
 
@@ -688,25 +721,26 @@ MobilityHelper mobility;
      }
 
   monitor->SerializeToXmlFile("luna.flowmon", true, true);
-#ifdef test 
+
 /*store new data in data vector */
 tempVec = strVector;
 strVector=  addNewResults(tempVec, convertUintToString(nSat),convertFloatToString(avgThroughput));
 
-//cout<<"Data to store in file...."<<endl; 
-//printVector(strVector);
-
-/*store run results to file */
-/writeVectorToFile(output_perfThroughput.c_str(),strVector);
+cout<<"Data to store in file...."<<endl; 
+printVector(strVector);
 
 
-vector<string> strVectorAvg;
- strVectorAvg= calculateAvg(strVector);
-//cout<<"printing AVG "<<endl;
-//printVector(strVectorAvg);
+/*store run results to file of DataSet*/
+//writeVectorToFile(output_perfThroughput.c_str(),strVector);
 
-writeVectorToFile(output_perfThroughputAvg.c_str(),strVectorAvg);
-#endif 
+
+vector<string> strVectorStats;
+ strVectorStats= calculateStats(strVector);
+cout<<"printing Stats"<<endl;
+printVector(strVectorStats);
+
+return 0; 
+////writeVectorToFile(output_perfThroughputAvg.c_str(),strVectorStats);
 
   Simulator::Destroy ();
 
