@@ -5,7 +5,7 @@
 #-------------------------------------------------------
 
 set xlabel "packet size (bytes)"
-set xrange [0:]
+set xrange [10:170]
 set ylabel "% Avg Delay --- average of 5 trials per distance"
 set yrange [0:]
 
