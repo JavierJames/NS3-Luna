@@ -383,12 +383,12 @@ RngSeedManager::SetRun(1);
   fstream file; 
   ifstream infile; 
   ofstream outfile; 
-  string output_perfThroughput = "./scratch/test.txt";
-  string output_perfThroughputAvg = "./scratch/testAvg.txt";
+  //string output_perfThroughput = "./scratch/test.txt";
+  //string output_perfThroughputStats = "./scratch/testStats.txt";
   //string output_perfThroughput = "./scratch/perfThroughput.txt";
-  //string output_perfThroughputAvg = "./scratch/perfThroughputAvg.txt";
+  //string output_perfThroughputStats = "./scratch/perfThroughputAvg.txt";
   string output_perfDelay = "./scratch/perfDelay.txt";
-  //string output_perfDelayAvg = "./scratch/perfDelayAvg.txt";
+  string output_perfDelayStats = "./scratch/perfDelayStats.txt";
   string output_file;
 
   vector<string> strVector; 
@@ -450,11 +450,12 @@ RngSeedManager::SetRun(1);
 /********************************************
 *capture data from files & read number of lines
 *********************************************/
-strVector= fetchDataFromFile(output_perfThroughput.c_str(),&number_of_lines);
+//strVector= fetchDataFromFile(output_perfThroughput.c_str(),&number_of_lines);
+strVector= fetchDataFromFile(output_perfDelay.c_str(),&number_of_lines);
+
 cout<<"Data read from file "<<endl;
 printVector(strVector);
 cout<<"number of lines: "<<number_of_lines<<endl;
-
 
 
   /******************************************************
@@ -724,7 +725,8 @@ MobilityHelper mobility;
 
 /*store new data in data vector */
 tempVec = strVector;
-strVector=  addNewResults(tempVec, convertUintToString(nSat),convertFloatToString(avgThroughput));
+//strVector=  addNewResults(tempVec, convertUintToString(nSat),convertFloatToString(avgThroughput));
+strVector=  addNewResults(tempVec, convertUintToString(packetSize),convertFloatToString(avgDelay));
 
 cout<<"Data to store in file...."<<endl; 
 printVector(strVector);
@@ -732,6 +734,7 @@ printVector(strVector);
 
 /*store run results to file of DataSet*/
 //writeVectorToFile(output_perfThroughput.c_str(),strVector);
+writeVectorToFile(output_perfDelay.c_str(),strVector);
 
 
 vector<string> strVectorStats;
@@ -739,10 +742,10 @@ vector<string> strVectorStats;
 cout<<"printing Stats"<<endl;
 printVector(strVectorStats);
 
-return 0; 
-////writeVectorToFile(output_perfThroughputAvg.c_str(),strVectorStats);
+//writeVectorToFile(output_perfThroughputStats.c_str(),strVectorStats);
+writeVectorToFile(output_perfDelayStats.c_str(),strVectorStats);
 
-  Simulator::Destroy ();
+Simulator::Destroy ();
 
 cout<<"run parameters value"<<endl;
 cout<<"nWifi : "<<nWifi<<endl;

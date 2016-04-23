@@ -64,9 +64,10 @@ fi
 
 
 
-PACKETSIZE="20"
+#PACKETSIZE="20"
 #DATARATE="DsssRate5_5Mbps"
-#PACKETSIZE="20 24 38 50 60 80 160"
+TRIALS="1 2 3 4 5"
+PACKETSIZE="20 24 38 50 60 80 160"
 #DATARATE="DsssRate1Mbps DsssRate2Mbps DsssRate5_5Mbps DsssRate11Mbps"
 DATARATE="DsssRate5_5Mbps"
 
@@ -85,6 +86,7 @@ done
 
 
 
-gnuplot luna-throughput.gnuplot
+#gnuplot luna-throughput.gnuplot
+gnuplot luna-delay.gnuplot
 
 echo "Done; data in wifi-default.data, plot in wifi-default.eps"
