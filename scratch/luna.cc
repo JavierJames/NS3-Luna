@@ -389,7 +389,9 @@ RngSeedManager::SetRun(1);
   //string output_perfThroughputStats = "./scratch/perfThroughputAvg.txt";
   string output_perfDelay = "./scratch/perfDelay.txt";
   string output_perfDelayStats = "./scratch/perfDelayStats.txt";
-  string output_file;
+  string fileID;
+  string filenameResults;
+  string filenameStats;
 
   vector<string> strVector; 
   string line;
@@ -399,8 +401,6 @@ RngSeedManager::SetRun(1);
   vector<string> tempVec = strVector;
   
   Time::SetResolution (Time::NS);
-
-
 
 
   {
@@ -427,6 +427,22 @@ RngSeedManager::SetRun(1);
   cmd.Parse (argc,argv);
 
 
+  fileID ="./scratch/"; 
+  //fileID.append(runID); 
+  fileID.append(dataRate); 
+  filenameResults ="./scratch/"; 
+  //filenameResults.append(runID); 
+  filenameResults.append(dataRate); 
+  filenameResults.append(".txt"); 
+  filenameStats ="./scratch/"; 
+  //filenameStats.append(runID); 
+  filenameStats.append(dataRate); 
+  filenameStats.append("-Stats.txt"); 
+  cout<<"run ID: "<<fileID<<endl;
+  cout<<"Filename : "<<filenameResults<<endl;
+  cout<<"Filename Stats : "<<filenameStats<<endl;
+
+
   if (format != "omnet" && format != "db") {
       NS_LOG_ERROR ("Unknown output format '" << format << "'");
       return -1;
@@ -451,7 +467,8 @@ RngSeedManager::SetRun(1);
 *capture data from files & read number of lines
 *********************************************/
 //strVector= fetchDataFromFile(output_perfThroughput.c_str(),&number_of_lines);
-strVector= fetchDataFromFile(output_perfDelay.c_str(),&number_of_lines);
+//strVector= fetchDataFromFile(output_perfDelay.c_str(),&number_of_lines);
+strVector= fetchDataFromFile(filenameResults.c_str(),&number_of_lines);
 
 cout<<"Data read from file "<<endl;
 printVector(strVector);
@@ -734,7 +751,8 @@ printVector(strVector);
 
 /*store run results to file of DataSet*/
 //writeVectorToFile(output_perfThroughput.c_str(),strVector);
-writeVectorToFile(output_perfDelay.c_str(),strVector);
+//writeVectorToFile(output_perfDelay.c_str(),strVector);
+writeVectorToFile(filenameResults.c_str(),strVector);
 
 
 vector<string> strVectorStats;
@@ -743,7 +761,8 @@ cout<<"printing Stats"<<endl;
 printVector(strVectorStats);
 
 //writeVectorToFile(output_perfThroughputStats.c_str(),strVectorStats);
-writeVectorToFile(output_perfDelayStats.c_str(),strVectorStats);
+//writeVectorToFile(output_perfDelayStats.c_str(),strVectorStats);
+writeVectorToFile(filenameStats.c_str(),strVectorStats);
 
 Simulator::Destroy ();
 

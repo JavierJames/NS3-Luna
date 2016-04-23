@@ -12,8 +12,12 @@ set yrange [0:]
 #set style histogram errorbars gap 2 lw 1
 #plot "perfDelay.txt" u 1:2:3 w hist
 
-plot "perfDelayStats.txt" with yerrorbar 
+#plot "perfDelayStats.txt" with yerrorbar 
 #replot "perfDelayStats.txt" with yerrorbar #2nd file 
+
+plot "DsssRate5_5Mbps-Stats.txt" with yerrorbar 
+replot "DsssRate11Mbps-Stats.txt" with yerrorbar #2nd file 
+
 
 set term png
 set output "luna-perfDelay.png"
