@@ -353,9 +353,6 @@ int main (int argc, char *argv[])
   uint32_t packetSize = 160; 	 	// bytes
   uint32_t numPackets = 320; 			//320
   double distance = 10;
-  //string dataRate = "DsssRate1Mbps";
-  //string dataRate = "DsssRate2Mbps";
-  //string dataRate = "DsssRate5_5Mbps";
   string dataRate = "DsssRate11Mbps";
 
   /* Qos parameters to observe */
@@ -511,16 +508,8 @@ cout<<"number of lines: "<<number_of_lines<<endl;
   *******************************************************/
   cout<<"Creating Topology and creating network devices in nodes  ..."<<endl;
   YansWifiChannelHelper wifiChannel = YansWifiChannelHelper::Default ();
-  //wifiChannel.SetPropagationDelay ("ns3::ConstantSpeedPropagationDelayModel");
   wifiChannel.AddPropagationLoss ("ns3::FixedRssLossModel","Rss",DoubleValue (2));
- 
-  //wifiChannel.AddPropagationLoss ("ns3::LogDistancePropagationLossModel",
-  //                                "Exponent", DoubleValue (3.0));
-
-  //wifiChannel.SetPropagationDelay ("ns3::PropagationDelayModel");
   wifiChannel.SetPropagationDelay ("ns3::RandomPropagationDelayModel");
-  //wifiChannel.AddPropagationLoss ("ns3::PropogationDelayModel");
-
 
   YansWifiPhyHelper wifiPhy = YansWifiPhyHelper::Default ();
   wifiPhy.SetPcapDataLinkType (YansWifiPhyHelper::DLT_IEEE802_11_RADIO); // ns-3 supports RadioTap and Prism tracing extensions for 802.11b
@@ -533,12 +522,10 @@ cout<<"number of lines: "<<number_of_lines<<endl;
   cout<<"Configuring MAC layer ..."<<endl;
   string phyMode; 
   phyMode= dataRate;
-  //phyMode= "DsssRate1Mbps";
 
 
   WifiHelper wifi = WifiHelper::Default ();
   wifi.SetStandard (WIFI_PHY_STANDARD_80211b);
-  //wifi.SetRemoteStationManager ("ns3::AarfWifiManager");  //set rate control algorithm
   wifi.SetRemoteStationManager ("ns3::ConstantRateWifiManager",
                                 "DataMode",StringValue (phyMode),
                                 "ControlMode",StringValue (phyMode));
@@ -648,16 +635,10 @@ MobilityHelper mobility;
   Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator>();
   positionAlloc->Add(Vector(0.0, 0.0, 0.0));
   positionAlloc->Add(Vector(0.0, distance, 0.0));
-  //positionAlloc->Add(Vector( distance,0.0, 0.0));
   mobility.SetPositionAllocator(positionAlloc);
-  //NodeContainer nodes( wifiStaNodes, wifiApNode); 
-//  NodeContainer nodes; 
- // nodes.Add(wifiStaNodes.Get(0)); 
- // nodes.Add(wifiApNode.Get(0)); 
-  //mobility.Install (nodes); //set constant position mobility model on AP 
-   mobility.InstallAll();
+  mobility.InstallAll();
 
-   mobility.Install(nodesAh);
+  mobility.Install(nodesAh);
 
 
 

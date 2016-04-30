@@ -10,10 +10,11 @@ set output "luna-perfDelay.png"
 #set term x11
 
 #axis property
-#set xlabel "packet size (bytes)"
-#set xrange [10:170]
-#set ylabel "% Avg Delay --- average of 5 trials per distance"
-#set yrange [0:]
+set xlabel "payload size (bytes)"
+set trange [10:170]
+set xrange [10:170]
+set ylabel "% Avg Delay --- average from 5 trials per payload size"
+#set yrange [0]
 
 
 
@@ -41,14 +42,17 @@ if (!exists("MP_GAP"))    MP_GAP = 0.05
 
 #replot
 
+const=200 
 
 set output "DsssRate1Mbps-Stats.png"
-plot "DsssRate1Mbps-Stats.txt" with yerrorbar #2nd file 
+#plot (x**0)*const
+plot "DsssRate1Mbps-Stats.txt" with yerrorbar, (x**0)*const title 'Qos'  #2nd file  
+  
 set output "DsssRate2Mbps-Stats.png"
-plot "DsssRate2Mbps-Stats.txt" with yerrorbar #2nd file 
+plot "DsssRate2Mbps-Stats.txt" with yerrorbar , (x**0)*const title 'Qos'  #2nd file 
 set output "DsssRate5_5Mbps-Stats.png"
-plot "DsssRate5_5Mbps-Stats.txt" with yerrorbar #2nd file 
+plot "DsssRate5_5Mbps-Stats.txt" with yerrorbar, (x**0)*const title 'Qos'    #2nd file 
 set output "DsssRate11Mbps-Stats.png"
-plot "DsssRate11Mbps-Stats.txt" with yerrorbar #2nd file 
+plot "DsssRate11Mbps-Stats.txt" with yerrorbar, (x**0)*const title 'Qos'   #2nd file 
 
 

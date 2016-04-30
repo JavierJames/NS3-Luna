@@ -72,28 +72,25 @@ then
     echo Deleting database
     rm ./DsssRate1Mbps.txt
     rm ./DsssRate1Mbps-Stats.txt
+    rm ./DsssRate1Mbps-Stats.png
     rm ./DsssRate2Mbps.txt
     rm ./DsssRate2Mbps-Stats.txt
+    rm ./DsssRate2Mbps-Stats.png
     rm ./DsssRate5_5Mbps.txt
     rm ./DsssRate5_5Mbps-Stats.txt
+    rm ./DsssRate5_5Mbps-Stats.png
     rm ./DsssRate11Mbps.txt
     rm ./DsssRate11Mbps-Stats.txt
+    rm ./DsssRate11Mbps-Stats.png
   fi
 fi
 
-#PACKETSIZE="20"
-#DATARATE="DsssRate5_5Mbps"
+#Perofmance simulation: Delay 
+#parameters: Datalink speed 
+#            Packet size 
 TRIALS="1 2 3 4 5"
 PACKETSIZE="20 24 38 50 60 80 160"
 DATARATE="DsssRate1Mbps DsssRate2Mbps DsssRate5_5Mbps DsssRate11Mbps"
-#TRIALS="1"
-#PACKETSIZE="20 24"
-#DATARATE="DsssRate5_5Mbps  DsssRate11Mbps"
-
-
-#TRIALS="1 2 3"
-#PACKETSIZE="20 24 38"
-#DATARATE="DsssRate5_5Mbps"
 
 for trial in $TRIALS
 do
@@ -107,10 +104,8 @@ do
   done
 done  
 
-
-
+gnuplot luna-delay.gnuplot
+echo "Done; dataset in DsssRatexxMbps.txt [parameter,trial1, trail2, ..] , statistic in DsssRatexxMbps-Stats.txt [parameter,mean,standard deviation], plot in luna-perfDelay.png"
 
 #gnuplot luna-throughput.gnuplot
-gnuplot luna-delay.gnuplot
 
-echo "Done; dataset in DsssRatexxMbps.txt [parameter,trial1, trail2, ..] , statistic in DsssRatexxMbps-Stats.txt [parameter,mean,standard deviation], plot in luna-perfDelay.png"
